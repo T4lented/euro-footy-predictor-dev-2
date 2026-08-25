@@ -15,7 +15,8 @@
     "footy": "node bin/footy.js",
     "today": "node bin/footy.js today",
     "leagues": "node bin/footy.js leagues",
-    "bundle": "node scripts/createBundle.js"
+    "bundle": "node scripts/createBundle.js",
+    "test": "vitest run"
   },
   "keywords": [
     "football",
@@ -54,6 +55,7 @@
     "postcss": "8.5.26",
     "tailwindcss": "3.4.19",
     "typescript": "5.9.3",
-    "vite": "7.3.6"
+    "vite": "7.3.6",
+    "vitest": "^2.1.9"
   }
 }

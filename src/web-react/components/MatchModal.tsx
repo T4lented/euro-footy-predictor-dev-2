@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Fixture } from '../types';
+import { KellyPanel } from './KellyPanel';
 
 interface MatchModalProps {
   fixture: Fixture | null;
@@ -145,6 +146,8 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
               </div>
             ))}
           </div>
+
+          <KellyPanel fixture={fixture} />
 
           <div>
             <h4 className="mb-2 font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Most likely scorelines</h4>

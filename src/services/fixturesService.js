@@ -134,7 +134,7 @@ function extractMatchStats(comp, homeComp, awayComp) {
  */
 let proxyDisabled = false;
 
-async function fetchEspnFixtures(targetDate, targetLeagues, options = {}) {
+async function fetchEspnFixtures(targetDate, targetLeagues) {
   const dateYMD = targetDate ? targetDate.replace(/-/g, '') : null;
   const fixtures = [];
   const inBrowser = typeof window !== 'undefined';
@@ -288,7 +288,7 @@ export async function getDailyFixtures(dateStr = null, leagueFilter = null, opti
     throw new Error(`Unknown league filter: "${leagueFilter}". Run "footy leagues" for available codes.`);
   }
 
-  const { fixtures: espnFixtures, okLeagues, totalLeagues } = await fetchEspnFixtures(dateStr, targetLeagues, options);
+  const { fixtures: espnFixtures, okLeagues, totalLeagues } = await fetchEspnFixtures(dateStr, targetLeagues);
 
   if (espnFixtures && espnFixtures.length > 0) {
     return {
