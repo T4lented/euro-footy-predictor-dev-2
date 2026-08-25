@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Light theme -- pink glass */
+  --page-bg: #FDF2F8;
+  --surface: rgba(255, 255, 255, 0.55);
+  --surface-strong: rgba(255, 255, 255, 0.75);
+  --border-glass: rgba(157, 23, 77, 0.16);
+  --border-glass-strong: rgba(157, 23, 77, 0.34);
+  --text-primary: #3F0620;
+  --text-secondary: #9D174D;
+  --text-tertiary: #C26694;
+  --accent: #DB2777;
+  --accent-strong: #9D174D;
+  --accent-tint: rgba(219, 39, 119, 0.12);
+  --accent-tint-strong: rgba(219, 39, 119, 0.22);
+  --blob-a: #F9A8D4;
+  --blob-b: #FBCFE8;
+  --blob-c: #F472B6;
+  --grid-line: rgba(157, 23, 77, 0.055);
+  --win: #16A34A;
+  --draw: #CA8A04;
+  --lose: #DC2626;
+
+  /* Aliases used across components */
+  --accent-soft: var(--accent-tint);
+  --accent-text: var(--accent-strong);
+  --text-muted: var(--text-tertiary);
+  --home: var(--win);
+  --away: var(--lose);
+}
+
+.dark {
+  /* Dark theme -- pitch glass */
+  --page-bg: #070C0A;
+  --surface: rgba(15, 27, 23, 0.48);
+  --surface-strong: rgba(15, 27, 23, 0.72);
+  --border-glass: rgba(239, 244, 239, 0.10);
+  --border-glass-strong: rgba(239, 244, 239, 0.24);
+  --text-primary: #EFF4EF;
+  --text-secondary: #9FC2AC;
+  --text-tertiary: #6C8577;
+  --accent: #3FA35A;
+  --accent-strong: #6FDE8F;
+  --accent-tint: rgba(63, 163, 90, 0.14);
+  --accent-tint-strong: rgba(63, 163, 90, 0.26);
+  --blob-a: #14532D;
+  --blob-b: #1B2E27;
+  --blob-c: #0F3D24;
+  --grid-line: rgba(239, 244, 239, 0.045);
+  --win: #22C55E;
+  --draw: #EAB308;
+  --lose: #EF4444;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply font-body antialiased;
+    background-color: var(--page-bg);
+    color: var(--text-primary);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 44px 44px;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  ::selection {
+    background: var(--accent-tint-strong);
+    color: var(--text-primary);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-glass-strong) transparent;
+  }
+  *::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--border-glass-strong);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .glass {
+    background-color: var(--surface);
+    border: 1px solid var(--border-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .glass-strong {
+    background-color: var(--surface-strong);
+    border: 1px solid var(--border-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .glass-hover {
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+  .glass-hover:hover {
+    background-color: var(--surface-strong);
+    border-color: var(--border-glass-strong);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
