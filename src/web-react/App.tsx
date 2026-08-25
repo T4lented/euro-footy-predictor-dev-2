@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getDailyFixtures } from '../services/fixturesService.js';
 import { LEAGUE_LIST } from '../config/leagues.js';
-import { Navbar } from './components/Navbar';
+import { Navbar, type Page } from './components/Navbar';
 import { DateRibbon } from './components/DateRibbon';
 import { LeagueSidebar } from './components/LeagueSidebar';
 import { LeagueSection } from './components/LeagueSection';
@@ -12,6 +12,8 @@ import { SelectionBar } from './components/SelectionBar';
 import { BetSlipModal } from './components/BetSlipModal';
 import { FeaturesSection } from './components/FeaturesSection';
 import { Footer } from './components/Footer';
+import { KellyCalculatorPage } from './components/KellyCalculatorPage';
+import { PortfolioTrackerPage } from './components/PortfolioTrackerPage';
 import { useTheme } from './hooks/useTheme';
 import { sanitizeSearchQuery, isValidDateString } from './lib/validation';
 import { sortFixtures } from './lib/export';
@@ -60,6 +62,7 @@ export default function App() {
   const [slipOpen, setSlipOpen] = useState(false);
   const [slip, setSlip] = useState<Fixture[]>([]);
   const [formMap, setFormMap] = useState<Record<string, { recentForm: string[]; formPoints: number }> | null>(null);
+  const [activePage, setActivePage] = useState<Page>('fixtures');
 
   useEffect(() => {
     const today = formatDate(new Date());
@@ -139,7 +142,6 @@ export default function App() {
     );
   }, [fixtures, query]);
 
-  // Group fixtures by league
   const groupedFixtures = useMemo(() => {
     const groups: Record<string, Fixture[]> = {};
     for (const fixture of filtered) {
@@ -224,6 +226,8 @@ export default function App() {
 
   const activeLeagueLabel = leagueCode ? leagues.find(l => l.code === leagueCode)?.name : null;
 
+  const isFixturesPage = activePage === 'fixtures';
+
   return (
     <div className="relative min-h-screen flex flex-col">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
@@ -247,129 +251,137 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onOpenMenu={() => setMobileMenuOpen(true)}
-        activeLeagueLabel={activeLeagueLabel}
+        activeLeagueLabel={isFixturesPage ? activeLeagueLabel : null}
+        activePage={activePage}
+        onNavigate={setActivePage}
       />
 
-      <MobileMenu
-        open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        leagues={leagues}
-        activeCode={leagueCode}
-        counts={counts}
-        onSelect={setLeagueCode}
-        fixturesByLeague={fixturesByLeague}
-        onSelectGame={setActiveFixture}
-      />
+      {isFixturesPage && (
+        <>
+          <MobileMenu
+            open={mobileMenuOpen}
+            onClose={() => setMobileMenuOpen(false)}
+            leagues={leagues}
+            activeCode={leagueCode}
+            counts={counts}
+            onSelect={setLeagueCode}
+            fixturesByLeague={fixturesByLeague}
+            onSelectGame={setActiveFixture}
+          />
 
-      <DateRibbon dates={dateOptions} selected={selectedDate} onSelect={setSelectedDate} />
+          <DateRibbon dates={dateOptions} selected={selectedDate} onSelect={setSelectedDate} />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-1">
-        <LeagueSidebar
-          leagues={leagues}
-          activeCode={leagueCode}
-          counts={counts}
-          onSelect={setLeagueCode}
-          fixturesByLeague={fixturesByLeague}
-          onSelectGame={setActiveFixture}
-        />
+          <div className="mx-auto flex w-full max-w-7xl flex-1">
+            <LeagueSidebar
+              leagues={leagues}
+              activeCode={leagueCode}
+              counts={counts}
+              onSelect={setLeagueCode}
+              fixturesByLeague={fixturesByLeague}
+              onSelectGame={setActiveFixture}
+            />
 
-        <main className="min-w-0 flex-1 p-4 sm:p-6 overflow-x-hidden">
-          {loading && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="glass h-40 animate-pulse" />
-              ))}
-            </div>
-          )}
-
-          {!loading && error && (
-            <div className="glass p-6 text-center" style={{ borderColor: 'var(--lose)' }}>
-              <p className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Couldn't load fixtures</p>
-              <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{error}</p>
-            </div>
-          )}
-
-          {!loading && !error && data && filtered.length === 0 && (
-            <div className="glass p-8 text-center">
-              <p className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>No fixtures found</p>
-              <p className="mx-auto mt-1 max-w-sm text-xs" style={{ color: 'var(--text-secondary)' }}>
-                {data.message || 'Try another date, clear the league filter, or clear your search.'}
-              </p>
-            </div>
-          )}
-
-{!loading && !error && filtered.length > 0 && (
-            <>
-              <div className="mb-3 flex items-center justify-between font-mono text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                <span>{filtered.length} fixture{filtered.length === 1 ? '' : 's'} · {data?.provider}</span>
-                <span>{selectedDate}</span>
-              </div>
-
-              {/* Global sort dropdown (optional) */}
-              {globalSort && globallySortedFixtures && (
-                <div className="glass mb-4 overflow-hidden">
-                  <div className="flex items-center justify-between border-b p-3" style={{ borderColor: 'var(--border-glass)' }}>
-                    <h2 className="font-display text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                      📊 Globally Sorted Fixtures
-                    </h2>
-                    <button
-                      onClick={() => setGlobalSort(null)}
-                      className="text-xs uppercase" style={{ color: 'var(--text-secondary)' }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {globallySortedFixtures.map((fixture) => (
-                      <FixtureCard key={fixture.id} fixture={fixture} onOpen={setActiveFixture} />
-                    ))}
-                  </div>
+            <main className="min-w-0 flex-1 p-4 sm:p-6 overflow-x-hidden">
+              {loading && (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="glass h-40 animate-pulse" />
+                  ))}
                 </div>
               )}
 
-              {/* League sections with per-league sorting */}
-              <div className="space-y-4">
-                {Object.entries(groupedFixtures).map(([code, leagueFixtures]) => {
-                  const league = leagues.find(l => l.code === code);
-                  if (!league) return null;
+              {!loading && error && (
+                <div className="glass p-6 text-center" style={{ borderColor: 'var(--lose)' }}>
+                  <p className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Couldn't load fixtures</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{error}</p>
+                </div>
+              )}
 
-                  return (
-                    <LeagueSection
-                      key={code}
-                      leagueCode={code}
-                      leagueName={league.name}
-                      flag={league.flag}
-                      country={league.country}
-                      fixtures={leagueFixtures}
-                      onOpen={setActiveFixture}
-                    />
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </main>
-      </div>
+              {!loading && !error && data && filtered.length === 0 && (
+                <div className="glass p-8 text-center">
+                  <p className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>No fixtures found</p>
+                  <p className="mx-auto mt-1 max-w-sm text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    {data.message || 'Try another date, clear the league filter, or clear your search.'}
+                  </p>
+                </div>
+              )}
 
-      <FeaturesSection />
+              {!loading && !error && filtered.length > 0 && (
+                <>
+                  <div className="mb-3 flex items-center justify-between font-mono text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+                    <span>{filtered.length} fixture{filtered.length === 1 ? '' : 's'} · {data?.provider}</span>
+                    <span>{selectedDate}</span>
+                  </div>
+
+                  {globalSort && globallySortedFixtures && (
+                    <div className="glass mb-4 overflow-hidden">
+                      <div className="flex items-center justify-between border-b p-3" style={{ borderColor: 'var(--border-glass)' }}>
+                        <h2 className="font-display text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                          📊 Globally Sorted Fixtures
+                        </h2>
+                        <button
+                          onClick={() => setGlobalSort(null)}
+                          className="text-xs uppercase" style={{ color: 'var(--text-secondary)' }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {globallySortedFixtures.map((fixture) => (
+                          <FixtureCard key={fixture.id} fixture={fixture} onOpen={setActiveFixture} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {Object.entries(groupedFixtures).map(([code, leagueFixtures]) => {
+                      const league = leagues.find(l => l.code === code);
+                      if (!league) return null;
+
+                      return (
+                        <LeagueSection
+                          key={code}
+                          leagueCode={code}
+                          leagueName={league.name}
+                          flag={league.flag}
+                          country={league.country}
+                          fixtures={leagueFixtures}
+                          onOpen={setActiveFixture}
+                        />
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </main>
+          </div>
+
+          <FeaturesSection />
+
+          <SelectionBar
+            count={selectedFixtures.length}
+            onExportPng={() => exportFixturesImage(selectedFixtures, selectedDate, theme)}
+            onClear={() => setSelectedIds(new Set())}
+            slipCount={slip.length}
+            onOpenSlip={() => setSlipOpen(true)}
+          />
+
+          <BetSlipModal
+            open={slipOpen}
+            fixtures={slipFixtures}
+            dateStr={selectedDate}
+            onClose={() => setSlipOpen(false)}
+          />
+
+          <MatchModal fixture={activeFixture} onClose={() => setActiveFixture(null)} />
+        </>
+      )}
+
+      {activePage === 'calculator' && <KellyCalculatorPage />}
+      {activePage === 'portfolio' && <PortfolioTrackerPage />}
+
       <Footer />
-
-      <SelectionBar
-        count={selectedFixtures.length}
-        onExportPng={() => exportFixturesImage(selectedFixtures, selectedDate, theme)}
-        onClear={() => setSelectedIds(new Set())}
-        slipCount={slip.length}
-        onOpenSlip={() => setSlipOpen(true)}
-      />
-
-      <BetSlipModal
-        open={slipOpen}
-        fixtures={slipFixtures}
-        dateStr={selectedDate}
-        onClose={() => setSlipOpen(false)}
-      />
-
-      <MatchModal fixture={activeFixture} onClose={() => setActiveFixture(null)} />
     </div>
   );
 }
