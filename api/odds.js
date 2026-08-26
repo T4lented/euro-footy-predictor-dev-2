@@ -67,14 +67,8 @@ export default async function handler(req, res) {
     const payload = await upstream.json();
     const events = Array.isArray(payload) ? payload : [];
 
-    const filteredEvents = events.filter(event => {
-      if (!event.commence_time) return false;
-      const eventDate = new Date(event.commence_time).toISOString().slice(0, 10);
-      return eventDate === date;
-    });
-
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
-    return res.status(200).json({ mode: 'provider', events: filteredEvents, sport: sportKey, fetchedAt: new Date().toISOString() });
+    return res.status(200).json({ mode: 'provider', events, sport: sportKey, fetchedAt: new Date().toISOString() });
   } catch {
     return res.status(502).json({ error: 'Live odds are temporarily unavailable. Enter decimal odds manually.' });
   }

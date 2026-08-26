@@ -70,10 +70,9 @@ export function KellyPanel({ fixture }: KellyPanelProps) {
     async function autoFetchOdds() {
       setFetchingOdds(true);
       try {
-        const today = new Date().toISOString().slice(0, 10);
         const result = await fetchOddsForFixture(
           { homeTeam: fixture.homeTeam, awayTeam: fixture.awayTeam, leagueCode: fixture.leagueCode },
-          today
+          fixture.date || new Date().toISOString().slice(0, 10)
         );
 
         if (result.odds) {
