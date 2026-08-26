@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Fixture } from '../types';
+import { TeamLogo } from './TeamLogo';
 
 interface MatchModalProps {
   fixture: Fixture | null;
@@ -37,25 +38,11 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
               <span>{fixture.flag}</span> {fixture.leagueName} · {fixture.matchType}
             </p>
             <h3 className="mt-1.5 flex flex-wrap items-center gap-2 font-display text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-              {fixture.homeTeamLogo && (
-                <img
-                  src={fixture.homeTeamLogo}
-                  alt=""
-                  className="size-6 shrink-0 object-contain"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              )}
+              <TeamLogo logo={fixture.homeTeamLogo} name={fixture.homeTeam} className="size-6 shrink-0" />
               {fixture.homeTeam}
               <span style={{ color: 'var(--text-muted)' }}>vs</span>
               {fixture.awayTeam}
-              {fixture.awayTeamLogo && (
-                <img
-                  src={fixture.awayTeamLogo}
-                  alt=""
-                  className="size-6 shrink-0 object-contain"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              )}
+              <TeamLogo logo={fixture.awayTeamLogo} name={fixture.awayTeam} className="size-6 shrink-0" />
             </h3>
             <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{fixture.stadium} · {fixture.time}</p>
           </div>
@@ -75,9 +62,7 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
                   <span className="truncate font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{fixture.homeTeam}</span>
-                  {fixture.homeTeamLogo && (
-                    <img src={fixture.homeTeamLogo} alt="" className="size-6 shrink-0 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                  )}
+                  <TeamLogo logo={fixture.homeTeamLogo} name={fixture.homeTeam} className="size-6 shrink-0" />
                 </div>
                 <div className="shrink-0 text-center">
                   <p className="font-mono text-3xl font-bold tabular" style={{ color: 'var(--text-primary)' }}>
@@ -88,9 +73,7 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
                   </p>
                 </div>
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {fixture.awayTeamLogo && (
-                    <img src={fixture.awayTeamLogo} alt="" className="size-6 shrink-0 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                  )}
+                  <TeamLogo logo={fixture.awayTeamLogo} name={fixture.awayTeam} className="size-6 shrink-0" />
                   <span className="truncate font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{fixture.awayTeam}</span>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Clock, BarChart3 } from 'lucide-react';
 import type { Fixture } from '../types';
+import { TeamLogo } from './TeamLogo';
 
 interface FixtureCardProps {
   fixture: Fixture;
@@ -101,27 +102,11 @@ export function FixtureCard({ fixture, onOpen, selected = false, onToggleSelect,
       <div className="mt-3 flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 truncate font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-            {fixture.homeTeamLogo && (
-              <img
-                src={fixture.homeTeamLogo}
-                alt=""
-                className="size-5 shrink-0 object-contain"
-                loading="lazy"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            )}
+            <TeamLogo logo={fixture.homeTeamLogo} name={fixture.homeTeam} />
             <span className="truncate">{fixture.homeTeam}</span>
           </p>
           <p className="mt-1.5 flex items-center gap-2 truncate font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-            {fixture.awayTeamLogo && (
-              <img
-                src={fixture.awayTeamLogo}
-                alt=""
-                className="size-5 shrink-0 object-contain"
-                loading="lazy"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            )}
+            <TeamLogo logo={fixture.awayTeamLogo} name={fixture.awayTeam} />
             <span className="truncate">{fixture.awayTeam}</span>
           </p>
         </div>
