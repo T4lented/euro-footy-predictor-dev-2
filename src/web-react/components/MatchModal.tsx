@@ -171,26 +171,24 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
                 <span style={{ color: 'var(--win)' }}>{prediction.h2h.homeWins || 0}W</span>
                 <span style={{ color: 'var(--draw)' }}>{prediction.h2h.draws || 0}D</span>
                 <span style={{ color: 'var(--lose)' }}>{prediction.h2h.awayWins || 0}L</span>
-
-                {prediction.h2h.last5Meetings && prediction.h2h.last5Meetings.length > 0 && (
-                  <>
-                    <span className="ml-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                      · Last 5:
-                    </span>
-                    {prediction.h2h.last5Meetings.slice(0, 3).map((m, i) => (
-                      <span key={i} className="text-[10px]">
-                        {i > 0 && ' · '}
-                        {m.home} {m.score} {m.away}
-                      </span>
-                    ))}
-                    {prediction.h2h.last5Meetings.length > 3 && (
-                      <span className="text-[10px]"> · +{prediction.h2h.last5Meetings.length - 3} more</span>
-                    )}
-                  </>
-                )}
-
                 {prediction.h2h.derbyOrRivalry ? ' · rivalry fixture' : ''}
               </div>
+
+              {prediction.h2h.last5Meetings && prediction.h2h.last5Meetings.length > 0 && (
+                <div className="mt-2 space-y-1 border-t pt-2" style={{ borderColor: 'var(--border-glass)' }}>
+                  <p className="font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                    Last {prediction.h2h.last5Meetings.length} meetings
+                  </p>
+                  {prediction.h2h.last5Meetings.map((m, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 font-mono text-[10px] tabular">
+                      <span className="shrink-0" style={{ color: 'var(--text-muted)' }}>{m.date || '—'}</span>
+                      <span className="min-w-0 flex-1 truncate text-right" style={{ color: 'var(--text-primary)' }}>
+                        {m.home} <span style={{ color: 'var(--accent)' }}>{m.score}</span> {m.away}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="glass p-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
