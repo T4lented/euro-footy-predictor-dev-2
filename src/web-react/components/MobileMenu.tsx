@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { LeagueList } from './LeagueList';
-import type { Fixture, League } from '../types';
+import type { Fixture, League, SortOption } from '../types';
 
 interface MobileMenuProps {
   open: boolean;
@@ -12,9 +12,11 @@ interface MobileMenuProps {
   onSelect: (code: string | null) => void;
   fixturesByLeague?: Record<string, Fixture[]>;
   onSelectGame?: (fixture: Fixture) => void;
+  sort?: SortOption;
+  onSortChange?: (sort: SortOption) => void;
 }
 
-export function MobileMenu({ open, onClose, leagues, activeCode, counts, onSelect, fixturesByLeague, onSelectGame }: MobileMenuProps) {
+export function MobileMenu({ open, onClose, leagues, activeCode, counts, onSelect, fixturesByLeague, onSelectGame, sort, onSortChange }: MobileMenuProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -64,6 +66,8 @@ export function MobileMenu({ open, onClose, leagues, activeCode, counts, onSelec
               onClose();
               onSelectGame?.(f);
             }}
+            sort={sort}
+            onSortChange={onSortChange}
           />
         </div>
       </aside>

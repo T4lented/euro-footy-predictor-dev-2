@@ -267,6 +267,8 @@ export default function App() {
             onSelect={setLeagueCode}
             fixturesByLeague={fixturesByLeague}
             onSelectGame={setActiveFixture}
+            sort={sort}
+            onSortChange={setSort}
           />
 
           <DateRibbon dates={dateOptions} selected={selectedDate} onSelect={setSelectedDate} />
@@ -279,6 +281,8 @@ export default function App() {
               onSelect={setLeagueCode}
               fixturesByLeague={fixturesByLeague}
               onSelectGame={setActiveFixture}
+              sort={sort}
+              onSortChange={setSort}
             />
 
             <main className="min-w-0 flex-1 p-4 sm:p-6 overflow-x-hidden">
