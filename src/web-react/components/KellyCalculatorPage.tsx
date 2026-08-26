@@ -349,10 +349,8 @@ export function KellyCalculatorPage() {
                     className="w-full rounded border bg-transparent px-2 py-1.5 font-mono text-xs"
                     style={{ borderColor: 'var(--border-glass-strong)', color: 'var(--text-primary)' }}
                   >
-                    <option value="GBP">GBP (£)</option>
-                    <option value="EUR">EUR (€)</option>
                     <option value="USD">USD ($)</option>
-                    <option value="JPY">JPY (¥)</option>
+                    <option value="NGN">NGN (₦)</option>
                   </select>
                 </label>
                 <div className="sm:col-span-2">

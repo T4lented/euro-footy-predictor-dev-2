@@ -8,7 +8,7 @@ const wonBet: PortfolioBet = {
 
 describe('browser-local portfolio ledger', () => {
   it('keeps cash flows separate from performance while reserving pending exposure', () => {
-    const state = createPortfolio('GBP');
+    const state = createPortfolio('USD');
     state.settings.bankroll = 100;
     state.cashFlows = [{ id: 'cash-1', kind: 'deposit', amount: 20, createdAt: 1 }];
     state.bets = [wonBet, { ...wonBet, id: 'bet-2', status: 'pending', actualStake: 15 }];
@@ -25,7 +25,7 @@ describe('browser-local portfolio ledger', () => {
   });
 
   it('accepts only a valid versioned import', () => {
-    expect(parsePortfolio(createPortfolio('EUR'))?.settings.currency).toBe('EUR');
+    expect(parsePortfolio(createPortfolio('NGN'))?.settings.currency).toBe('NGN');
     expect(parsePortfolio({ version: 1, settings: { currency: 'XYZ' }, bets: [], cashFlows: [] })).toBeNull();
   });
 });

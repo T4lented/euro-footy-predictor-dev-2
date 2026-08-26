@@ -1,6 +1,6 @@
 import type { KellyRiskMode, OneX2Outcome } from './kelly';
 
-export type CurrencyCode = 'GBP' | 'EUR' | 'USD' | 'JPY';
+export type CurrencyCode = 'USD' | 'NGN';
 export type BetStatus = 'pending' | 'won' | 'lost' | 'void';
 
 export interface PortfolioSettings {
@@ -44,9 +44,9 @@ export interface PortfolioState {
 }
 
 export const PORTFOLIO_STORAGE_KEY = 'euro-footy-predictor-portfolio-v1';
-export const MINIMUM_STAKE_UNITS: Record<CurrencyCode, number> = { GBP: 0.01, EUR: 0.01, USD: 0.01, JPY: 1 };
+export const MINIMUM_STAKE_UNITS: Record<CurrencyCode, number> = { USD: 0.01, NGN: 1 };
 
-export function createPortfolio(currency: CurrencyCode = 'GBP'): PortfolioState {
+export function createPortfolio(currency: CurrencyCode = 'USD'): PortfolioState {
   return { version: 1, settings: { bankroll: 0, currency, minimumEdgePercent: 1, minimumStakeUnit: MINIMUM_STAKE_UNITS[currency], riskMode: 'moderate' }, bets: [], cashFlows: [] };
 }
 
@@ -67,7 +67,7 @@ export function parsePortfolio(value: unknown): PortfolioState | null {
   if (!value || typeof value !== 'object') return null;
   const data = value as Partial<PortfolioState>;
   if (data.version !== 1 || !data.settings || !Array.isArray(data.bets) || !Array.isArray(data.cashFlows)) return null;
-  if (!['GBP', 'EUR', 'USD', 'JPY'].includes(data.settings.currency as string)) return null;
+  if (!['USD', 'NGN'].includes(data.settings.currency as string)) return null;
   if (!Number.isFinite(data.settings.bankroll) || !Number.isFinite(data.settings.minimumEdgePercent) || !Number.isFinite(data.settings.minimumStakeUnit)) return null;
   return data as PortfolioState;
 }
@@ -88,7 +88,8 @@ export function portfolioMetrics(portfolio: PortfolioState) {
   return { cashBalance: portfolio.settings.bankroll + deposits - withdrawals + profitLoss - pendingExposure, pendingExposure, profitLoss, returnOnStakes: stakes > 0 ? profitLoss / stakes : null };
 }
 
-export function formatCurrency(value: number, _currency: CurrencyCode) {
+export function formatCurrency(value: number, currency: CurrencyCode) {
+  const symbol = currency === 'NGN' ? '₦' : '$';
   const formatted = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-  return `#${formatted}`;
+  return `${symbol}${formatted}`;
 }
