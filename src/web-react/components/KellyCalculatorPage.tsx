@@ -6,7 +6,7 @@ import { TeamLogo } from './TeamLogo';
 import { useTheme } from '../hooks/useTheme';
 import { sanitizeSearchQuery, isValidDateString } from '../lib/validation';
 import { sortFixtures } from '../lib/export';
-import { KELLY_RISK_MODES, calculateKelly, calculateNoVigMarket, type KellyRiskMode, type OneX2Odds, type OneX2Outcome } from '../lib/kelly';
+import { KELLY_RISK_MODES, calculateKelly, calculateNoVigMarket, calculatePortfolioExposure, type KellyRiskMode, type OneX2Odds, type OneX2Outcome } from '../lib/kelly';
 import { fetchOddsForFixture } from '../services/oddsService';
 import {
   formatCurrency,
@@ -16,7 +16,7 @@ import {
   type PortfolioState,
 } from '../lib/portfolio';
 import type { Fixture, FixturesResponse } from '../types';
-import { Search, Wallet, ChevronDown, ChevronRight, Zap, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Search, Wallet, ChevronDown, ChevronRight, Zap, TrendingUp, AlertTriangle, CheckCircle2, Shield, BarChart3, Info } from 'lucide-react';
 
 function formatDate(d: Date) {
   const y = d.getFullYear();
@@ -50,8 +50,11 @@ interface AutoBet {
   marketProb: number;
   fairProb: number;
   edge: number;
+  expectedValue: number;
   kellyStake: number;
   potentialReturn: number;
+  potentialProfit: number;
+  growthRate: number;
   riskMode: KellyRiskMode;
 }
 
@@ -166,8 +169,11 @@ export function KellyCalculatorPage() {
                 marketProb: (1 / odds[outcome]) * 100,
                 fairProb: fairProb * 100,
                 edge: edge * 100,
+                expectedValue: kelly.expectedValue * 100,
                 kellyStake: kelly.recommendedStake,
                 potentialReturn: kelly.recommendedStake * odds[outcome],
+                potentialProfit: kelly.potentialProfit,
+                growthRate: kelly.growthRate,
                 riskMode: portfolio.settings.riskMode ?? 'moderate',
               });
             }
@@ -241,6 +247,8 @@ export function KellyCalculatorPage() {
   const selectedBets = autoBets.filter((_, i) => selectedBetIds.has(i));
   const totalStake = selectedBets.reduce((sum, b) => sum + b.kellyStake, 0);
   const totalReturn = selectedBets.reduce((sum, b) => sum + b.potentialReturn, 0);
+  const totalProfit = selectedBets.reduce((sum, b) => sum + b.potentialProfit, 0);
+  const exposure = calculatePortfolioExposure(selectedBets.map(b => ({ stake: b.kellyStake, odds: b.odds[b.selection] })), portfolio.settings.bankroll || 1000);
 
   return (
     <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
@@ -299,6 +307,21 @@ export function KellyCalculatorPage() {
             {settingsOpen && (
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <label>
+                  <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Bankroll ({currency})</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step={portfolio.settings.minimumStakeUnit}
+                    value={portfolio.settings.bankroll || ''}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      updateSettings({ bankroll: Number.isFinite(v) ? v : 0 });
+                    }}
+                    className="w-full rounded border bg-transparent px-2 py-1.5 font-mono text-xs"
+                    style={{ borderColor: 'var(--border-glass-strong)', color: 'var(--text-primary)' }}
+                  />
+                </label>
+                <label>
                   <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Max Bet ({currency})</span>
                   <input
                     type="number"
@@ -350,6 +373,9 @@ export function KellyCalculatorPage() {
                       );
                     })}
                   </div>
+                  <p className="mt-1 text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                    {KELLY_RISK_MODES[portfolio.settings.riskMode ?? 'moderate'].description}
+                  </p>
                 </div>
               </div>
             )}
@@ -390,7 +416,6 @@ export function KellyCalculatorPage() {
               </div>
               {sorted.map((fixture) => {
                 const hasBet = autoBets.some(b => b.fixtureId === fixture.id);
-                const prob = fixture.prediction.probabilities;
                 return (
                   <div
                     key={fixture.id}
@@ -438,7 +463,7 @@ export function KellyCalculatorPage() {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
                 <TrendingUp className="size-3.5" />
-                Auto-Detected Positive EV Bets
+                Positive EV Bets
               </h3>
               {autoBets.length > 0 && (
                 <div className="flex gap-1.5">
@@ -460,7 +485,7 @@ export function KellyCalculatorPage() {
               </div>
             )}
 
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {autoBets.map((bet, index) => {
                 const isSelected = selectedBetIds.has(index);
                 const outcomeLabel = bet.selection === 'home' ? bet.fixture.homeTeam :
@@ -493,13 +518,15 @@ export function KellyCalculatorPage() {
                       <p className="mt-0.5 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {outcomeLabel}
                       </p>
-                      <div className="mt-1 flex gap-3 font-mono text-[10px] tabular">
-                        <span style={{ color: 'var(--text-secondary)' }}>Odds: {bet.odds[bet.selection].toFixed(2)}</span>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[10px] tabular">
+                        <span style={{ color: 'var(--text-secondary)' }}>Odds: <span style={{ color: 'var(--text-primary)' }}>{bet.odds[bet.selection].toFixed(2)}</span></span>
                         <span style={{ color: 'var(--text-secondary)' }}>Edge: <span style={{ color: 'var(--win)' }}>{bet.edge.toFixed(1)}%</span></span>
+                        <span style={{ color: 'var(--text-secondary)' }}>EV: <span style={{ color: bet.expectedValue > 0 ? 'var(--win)' : 'var(--lose)' }}>{bet.expectedValue.toFixed(1)}%</span></span>
                       </div>
-                      <div className="mt-1 flex gap-3 font-mono text-[10px] tabular">
-                        <span style={{ color: 'var(--text-secondary)' }}>Model: {bet.modelProb.toFixed(1)}%</span>
-                        <span style={{ color: 'var(--text-secondary)' }}>Market: {bet.marketProb.toFixed(1)}%</span>
+                      <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[9px] tabular" style={{ color: 'var(--text-muted)' }}>
+                        <span>Model: {bet.modelProb.toFixed(1)}%</span>
+                        <span>Market: {bet.marketProb.toFixed(1)}%</span>
+                        <span>Fair: {bet.fairProb.toFixed(1)}%</span>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
@@ -509,6 +536,9 @@ export function KellyCalculatorPage() {
                       <p className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
                         → {formatCurrency(bet.potentialReturn, currency)}
                       </p>
+                      <p className="font-mono text-[9px]" style={{ color: 'var(--win)' }}>
+                        +{formatCurrency(bet.potentialProfit, currency)}
+                      </p>
                     </div>
                   </button>
                 );
@@ -517,21 +547,43 @@ export function KellyCalculatorPage() {
 
             {autoBets.length > 0 && (
               <div className="mt-4 border-t pt-3" style={{ borderColor: 'var(--border-glass)' }}>
-                <div className="mb-3 flex justify-between font-mono text-xs tabular">
-                  <span style={{ color: 'var(--text-secondary)' }}>{selectedBetIds.size} bets selected</span>
-                  <span style={{ color: 'var(--text-primary)' }}>Stake: {formatCurrency(totalStake, currency)}</span>
+                {/* Exposure Warning */}
+                {exposure.isOverExposed && (
+                  <div className="mb-3 flex items-center gap-2 rounded p-2 text-[10px]" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--lose)' }}>
+                    <Shield className="size-3 shrink-0" />
+                    <span>Total exposure ({exposure.exposurePercent.toFixed(1)}%) exceeds 20% of bankroll. Reduce selections.</span>
+                  </div>
+                )}
+
+                {/* Summary */}
+                <div className="mb-3 space-y-1.5 font-mono text-[10px] tabular">
+                  <div className="flex justify-between">
+                    <span style={{ color: 'var(--text-secondary)' }}>Bets selected</span>
+                    <span style={{ color: 'var(--text-primary)' }}>{selectedBetIds.size} / {autoBets.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: 'var(--text-secondary)' }}>Total stake</span>
+                    <span style={{ color: 'var(--text-primary)' }}>{formatCurrency(totalStake, currency)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: 'var(--text-secondary)' }}>Potential profit</span>
+                    <span style={{ color: 'var(--win)' }}>+{formatCurrency(totalProfit, currency)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: 'var(--text-secondary)' }}>Exposure</span>
+                    <span style={{ color: exposure.isOverExposed ? 'var(--lose)' : 'var(--text-primary)' }}>
+                      {exposure.exposurePercent.toFixed(1)}% of bankroll
+                    </span>
+                  </div>
                 </div>
-                <div className="mb-3 flex justify-between font-mono text-[10px] tabular">
-                  <span style={{ color: 'var(--text-secondary)' }}>Potential return</span>
-                  <span style={{ color: 'var(--win)' }}>{formatCurrency(totalReturn, currency)}</span>
-                </div>
+
                 <button
                   onClick={confirmBets}
-                  disabled={selectedBetIds.size === 0}
+                  disabled={selectedBetIds.size === 0 || exposure.isOverExposed}
                   className="flex w-full items-center justify-center gap-2 rounded py-2.5 text-xs font-semibold transition-colors disabled:opacity-40"
                   style={{
-                    backgroundColor: selectedBetIds.size > 0 ? 'var(--win)' : 'var(--surface)',
-                    color: selectedBetIds.size > 0 ? 'white' : 'var(--text-muted)',
+                    backgroundColor: selectedBetIds.size > 0 && !exposure.isOverExposed ? 'var(--win)' : 'var(--surface)',
+                    color: selectedBetIds.size > 0 && !exposure.isOverExposed ? 'white' : 'var(--text-muted)',
                   }}
                 >
                   <CheckCircle2 className="size-3.5" />
