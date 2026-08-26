@@ -88,6 +88,7 @@ export function portfolioMetrics(portfolio: PortfolioState) {
   return { cashBalance: portfolio.settings.bankroll + deposits - withdrawals + profitLoss - pendingExposure, pendingExposure, profitLoss, returnOnStakes: stakes > 0 ? profitLoss / stakes : null };
 }
 
-export function formatCurrency(value: number, currency: CurrencyCode) {
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: currency === 'JPY' ? 0 : 2 }).format(value);
+export function formatCurrency(value: number, _currency: CurrencyCode) {
+  const formatted = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+  return `#${formatted}`;
 }
