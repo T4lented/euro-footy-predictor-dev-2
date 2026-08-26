@@ -158,6 +158,15 @@ export default function App() {
 
     const sorted = [...filtered];
     switch (globalSort) {
+      case 'confidence': {
+        const confRank: Record<string, number> = { 'Very High': 4, High: 3, Moderate: 2, 'Low (Contested)': 1 };
+        return sorted.sort(
+          (a, b) =>
+            (confRank[b.prediction.confidence] ?? 1) - (confRank[a.prediction.confidence] ?? 1) ||
+            Math.max(b.prediction.probabilities.homeWin, b.prediction.probabilities.awayWin) -
+            Math.max(a.prediction.probabilities.homeWin, a.prediction.probabilities.awayWin)
+        );
+      }
       case 'time-asc':
         return sorted.sort((a, b) => a.time.localeCompare(b.time));
       case 'time-desc':
@@ -186,6 +195,14 @@ export default function App() {
           );
           return probB - probA;
         });
+      case 'league-asc':
+        return sorted.sort((a, b) =>
+          a.leagueCode.localeCompare(b.leagueCode) || a.id.localeCompare(b.id)
+        );
+      case 'league-desc':
+        return sorted.sort((a, b) =>
+          b.leagueCode.localeCompare(a.leagueCode) || b.id.localeCompare(a.id)
+        );
       default:
         return null;
     }
@@ -324,10 +341,10 @@ export default function App() {
                       <button
                         key={value}
                         type="button"
-                        onClick={() => setSort(value)}
+                        onClick={() => setGlobalSort(globalSort === value ? null : value)}
                         className="border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide transition-colors"
                         style={
-                          sort === value
+                          globalSort === value
                             ? { borderColor: 'var(--accent)', backgroundColor: 'var(--accent-soft)', color: 'var(--accent-text)' }
                             : { borderColor: 'var(--border-glass)', color: 'var(--text-secondary)' }
                         }
@@ -335,47 +352,44 @@ export default function App() {
                         {label}
                       </button>
                     ))}
+                    {globalSort && (
+                      <button
+                        type="button"
+                        onClick={() => setGlobalSort(null)}
+                        className="border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide transition-colors"
+                        style={{ borderColor: 'var(--border-glass)', color: 'var(--text-muted)' }}
+                      >
+                        Clear
+                      </button>
+                    )}
                   </div>
 
-                  {globalSort && globallySortedFixtures && (
-                    <div className="glass mb-4 overflow-hidden">
-                      <div className="flex items-center justify-between border-b p-3" style={{ borderColor: 'var(--border-glass)' }}>
-                        <h2 className="font-display text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                          📊 Globally Sorted Fixtures
-                        </h2>
-                        <button
-                          onClick={() => setGlobalSort(null)}
-                          className="text-xs uppercase" style={{ color: 'var(--text-secondary)' }}
-                        >
-                          Clear
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {globallySortedFixtures.map((fixture) => (
-                          <FixtureCard key={fixture.id} fixture={fixture} onOpen={setActiveFixture} />
-                        ))}
-                      </div>
+                  {globalSort && globallySortedFixtures ? (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {globallySortedFixtures.map((fixture) => (
+                        <FixtureCard key={fixture.id} fixture={fixture} onOpen={setActiveFixture} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.entries(groupedFixtures).map(([code, leagueFixtures]) => {
+                        const league = leagues.find(l => l.code === code);
+                        if (!league) return null;
+
+                        return (
+                          <LeagueSection
+                            key={code}
+                            leagueCode={code}
+                            leagueName={league.name}
+                            flag={league.flag}
+                            country={league.country}
+                            fixtures={leagueFixtures}
+                            onOpen={setActiveFixture}
+                          />
+                        );
+                      })}
                     </div>
                   )}
-
-                  <div className="space-y-4">
-                    {Object.entries(groupedFixtures).map(([code, leagueFixtures]) => {
-                      const league = leagues.find(l => l.code === code);
-                      if (!league) return null;
-
-                      return (
-                        <LeagueSection
-                          key={code}
-                          leagueCode={code}
-                          leagueName={league.name}
-                          flag={league.flag}
-                          country={league.country}
-                          fixtures={leagueFixtures}
-                          onOpen={setActiveFixture}
-                        />
-                      );
-                    })}
-                  </div>
                 </>
               )}
             </main>
