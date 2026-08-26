@@ -12,8 +12,6 @@ import { SelectionBar } from './components/SelectionBar';
 import { BetSlipModal } from './components/BetSlipModal';
 import { FeaturesSection } from './components/FeaturesSection';
 import { Footer } from './components/Footer';
-import { KellyCalculatorPage } from './components/KellyCalculatorPage';
-import { PortfolioTrackerPage } from './components/PortfolioTrackerPage';
 import { useTheme } from './hooks/useTheme';
 import { sanitizeSearchQuery, isValidDateString } from './lib/validation';
 import { sortFixtures } from './lib/export';
@@ -416,9 +414,6 @@ export default function App() {
           <MatchModal fixture={activeFixture} onClose={() => setActiveFixture(null)} />
         </>
       )}
-
-      {activePage === 'calculator' && <KellyCalculatorPage />}
-      {activePage === 'portfolio' && <PortfolioTrackerPage />}
 
       <Footer />
     </div>

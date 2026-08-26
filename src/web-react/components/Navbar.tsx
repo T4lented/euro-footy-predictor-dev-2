@@ -2,7 +2,7 @@ import { Search, Menu } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import type { Theme } from '../hooks/useTheme';
 
-export type Page = 'fixtures' | 'calculator' | 'portfolio';
+export type Page = 'fixtures';
 
 interface NavbarProps {
   query: string;
@@ -17,8 +17,6 @@ interface NavbarProps {
 
 const NAV_ITEMS: { id: Page; label: string }[] = [
   { id: 'fixtures', label: 'Fixtures' },
-  { id: 'calculator', label: 'Kelly Calculator' },
-  { id: 'portfolio', label: 'Portfolio' },
 ];
 
 export function Navbar({ query, onQueryChange, theme, onToggleTheme, onOpenMenu, activeLeagueLabel, activePage, onNavigate }: NavbarProps) {
