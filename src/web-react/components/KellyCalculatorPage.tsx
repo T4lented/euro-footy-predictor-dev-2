@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { getDailyFixtures } from '../../services/fixturesService.js';
 import { LEAGUE_LIST } from '../../config/leagues.js';
-import { CompactKellyCard } from './CompactKellyCard';
 import { LeagueLogo } from './LeagueLogo';
+import { TeamLogo } from './TeamLogo';
 import { useTheme } from '../hooks/useTheme';
 import { sanitizeSearchQuery, isValidDateString } from '../lib/validation';
 import { sortFixtures } from '../lib/export';
-import { KELLY_RISK_MODES, type KellyRiskMode, type OneX2Outcome } from '../lib/kelly';
+import { KELLY_RISK_MODES, calculateKelly, calculateNoVigMarket, type KellyRiskMode, type OneX2Odds, type OneX2Outcome } from '../lib/kelly';
+import { fetchOddsForFixture } from '../services/oddsService';
 import {
   formatCurrency,
   loadPortfolio,
@@ -14,8 +15,8 @@ import {
   MINIMUM_STAKE_UNITS,
   type PortfolioState,
 } from '../lib/portfolio';
-import type { Fixture, FixturesResponse, League } from '../types';
-import { Search, X, Wallet, ChevronDown, ChevronRight } from 'lucide-react';
+import type { Fixture, FixturesResponse } from '../types';
+import { Search, Wallet, ChevronDown, ChevronRight, Zap, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 function formatDate(d: Date) {
   const y = d.getFullYear();
@@ -40,13 +41,17 @@ function buildDateOptions() {
   return options;
 }
 
-interface StagedBet {
+interface AutoBet {
   fixtureId: string;
-  fixtureLabel: string;
+  fixture: Fixture;
   selection: OneX2Outcome;
-  odds: { home: number; draw: number; away: number };
-  modelProbabilityPercent: number;
-  recommendedStake: number;
+  odds: OneX2Odds;
+  modelProb: number;
+  marketProb: number;
+  fairProb: number;
+  edge: number;
+  kellyStake: number;
+  potentialReturn: number;
   riskMode: KellyRiskMode;
 }
 
@@ -58,13 +63,15 @@ export function KellyCalculatorPage() {
   const [data, setData] = useState<FixturesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFixtureIds, setSelectedFixtureIds] = useState<Set<string>>(new Set());
+  const [oddsLoading, setOddsLoading] = useState(false);
   const [formMap, setFormMap] = useState<Record<string, { recentForm: string[]; formPoints: number }> | null>(null);
-  const [stagedBets, setStagedBets] = useState<StagedBet[]>([]);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [portfolio, setPortfolio] = useState<PortfolioState>(() => loadPortfolio());
   useEffect(() => { savePortfolio(portfolio); }, [portfolio]);
+
+  const [autoBets, setAutoBets] = useState<AutoBet[]>([]);
+  const [selectedBetIds, setSelectedBetIds] = useState<Set<number>>(new Set());
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   function updateSettings(patch: Partial<PortfolioState['settings']>) {
     setPortfolio((c) => ({ ...c, settings: { ...c.settings, ...patch } }));
@@ -113,69 +120,139 @@ export function KellyCalculatorPage() {
 
   const sorted = useMemo(() => sortFixtures(filtered, 'time-asc'), [filtered]);
 
-  const selectedFixtures = useMemo(
-    () => sorted.filter((f) => selectedFixtureIds.has(f.id)),
-    [sorted, selectedFixtureIds]
-  );
+  const fetchAllOdds = useCallback(async () => {
+    if (sorted.length === 0) return;
+    setOddsLoading(true);
+    const results: AutoBet[] = [];
 
-  function toggleFixture(id: string) {
-    setSelectedFixtureIds((prev) => {
+    const fetches = sorted.map(async (fixture) => {
+      try {
+        const { odds } = await fetchOddsForFixture(
+          { homeTeam: fixture.homeTeam, awayTeam: fixture.awayTeam, leagueCode: fixture.leagueCode },
+          fixture.date
+        );
+        if (!odds) return null;
+
+        const fair = calculateNoVigMarket(odds);
+        if (!fair) return null;
+
+        const probs = fixture.prediction.probabilities;
+        const bets: AutoBet[] = [];
+
+        for (const outcome of ['home', 'draw', 'away'] as OneX2Outcome[]) {
+          const modelProb = probs[outcome] / 100;
+          const fairProb = fair.fair[outcome];
+          const edge = modelProb - fairProb;
+
+          if (edge > 0.02) {
+            const kelly = calculateKelly({
+              bankroll: portfolio.settings.bankroll || 1000,
+              decimalOdds: odds[outcome],
+              modelProbabilityPercent: probs[outcome],
+              fairMarketProbability: fairProb * 100,
+              riskMode: portfolio.settings.riskMode ?? 'moderate',
+              minimumEdgePercent: portfolio.settings.minimumEdgePercent,
+              minimumStakeUnit: MINIMUM_STAKE_UNITS[portfolio.settings.currency],
+              maximumStake: portfolio.settings.maximumStake,
+            });
+
+            if (kelly.status === 'valid' && kelly.recommendedStake > 0) {
+              bets.push({
+                fixtureId: fixture.id,
+                fixture,
+                selection: outcome,
+                odds,
+                modelProb: probs[outcome],
+                marketProb: (1 / odds[outcome]) * 100,
+                fairProb: fairProb * 100,
+                edge: edge * 100,
+                kellyStake: kelly.recommendedStake,
+                potentialReturn: kelly.recommendedStake * odds[outcome],
+                riskMode: portfolio.settings.riskMode ?? 'moderate',
+              });
+            }
+          }
+        }
+
+        return bets.length > 0 ? bets.reduce((best, b) => b.edge > best.edge ? b : best) : null;
+      } catch {
+        return null;
+      }
+    });
+
+    const allResults = await Promise.all(fetches);
+    for (const result of allResults) {
+      if (result) results.push(result);
+    }
+
+    results.sort((a, b) => b.edge - a.edge);
+    setAutoBets(results);
+    setSelectedBetIds(new Set(results.map((_, i) => i)));
+    setOddsLoading(false);
+  }, [sorted, portfolio.settings]);
+
+  useEffect(() => {
+    if (!loading && sorted.length > 0) {
+      fetchAllOdds();
+    }
+  }, [loading, sorted.length, selectedDate]);
+
+  function toggleBet(index: number) {
+    setSelectedBetIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
       return next;
     });
   }
 
-  function removeFixture(id: string) {
-    setSelectedFixtureIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
+  function selectAll() {
+    setSelectedBetIds(new Set(autoBets.map((_, i) => i)));
   }
 
-  function stageBet(bet: StagedBet) {
-    setStagedBets((prev) => [...prev, bet]);
+  function selectNone() {
+    setSelectedBetIds(new Set());
   }
 
-  function removeStaged(index: number) {
-    setStagedBets((prev) => prev.filter((_, i) => i !== index));
-  }
+  function confirmBets() {
+    const bets = autoBets.filter((_, i) => selectedBetIds.has(i));
+    if (bets.length === 0) return;
 
-  function confirmAll() {
-    if (stagedBets.length === 0) return;
-    const newBets = stagedBets.map((b) => ({
+    const newBets = bets.map((b) => ({
       id: `${b.fixtureId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       fixtureId: b.fixtureId,
-      fixtureLabel: b.fixtureLabel,
+      fixtureLabel: `${b.fixture.homeTeam} vs ${b.fixture.awayTeam}`,
       selection: b.selection,
       oddsAtCalculation: b.odds[b.selection],
-      calculatedStake: b.recommendedStake,
-      modelProbabilityPercent: b.modelProbabilityPercent,
+      calculatedStake: b.kellyStake,
+      modelProbabilityPercent: b.modelProb,
       riskMode: b.riskMode,
       actualOdds: b.odds[b.selection],
-      actualStake: b.recommendedStake,
+      actualStake: b.kellyStake,
       status: 'pending' as const,
       createdAt: Date.now(),
     }));
+
     setPortfolio((c) => ({ ...c, bets: [...newBets, ...c.bets] }));
-    setStagedBets([]);
+    setSelectedBetIds(new Set());
   }
 
   const currency = portfolio.settings.currency;
-  const totalStaked = stagedBets.reduce((sum, b) => sum + b.recommendedStake, 0);
+  const selectedBets = autoBets.filter((_, i) => selectedBetIds.has(i));
+  const totalStake = selectedBets.reduce((sum, b) => sum + b.kellyStake, 0);
+  const totalReturn = selectedBets.reduce((sum, b) => sum + b.potentialReturn, 0);
 
   return (
     <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
       <div className="mb-6">
         <h2 className="font-display text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Kelly Calculator</h2>
         <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-          Select fixtures, enter odds, and calculate optimal Kelly stakes. Bankroll and risk settings are shared across all selections.
+          Auto-fetches odds, calculates edge, and recommends optimal stakes. Only positive EV bets shown.
         </p>
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
+        {/* Left: Fixtures & Controls */}
         <div className="w-full lg:w-1/2">
           <div className="mb-3 flex items-center gap-2">
             <div className="relative flex-1">
@@ -201,80 +278,7 @@ export function KellyCalculatorPage() {
             </select>
           </div>
 
-          {loading && (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="glass h-20 animate-pulse" />
-              ))}
-            </div>
-          )}
-
-          {!loading && error && (
-            <div className="glass p-4 text-center" style={{ borderColor: 'var(--lose)' }}>
-              <p className="text-xs" style={{ color: 'var(--lose)' }}>{error}</p>
-            </div>
-          )}
-
-          {!loading && !error && sorted.length === 0 && (
-            <div className="glass p-6 text-center">
-              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>No fixtures available for this date.</p>
-            </div>
-          )}
-
-          {!loading && sorted.length > 0 && (
-            <div className="space-y-2">
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                {sorted.length} fixtures · {selectedFixtureIds.size} selected
-              </p>
-              {sorted.map((fixture) => {
-                const isSelected = selectedFixtureIds.has(fixture.id);
-                const prob = fixture.prediction.probabilities;
-                return (
-                  <button
-                    key={fixture.id}
-                    onClick={() => toggleFixture(fixture.id)}
-                    className="glass flex w-full items-center gap-3 p-3 text-left transition-colors"
-                    style={{
-                      borderColor: isSelected ? 'var(--accent)' : 'var(--border-glass)',
-                      backgroundColor: isSelected ? 'var(--accent-tint)' : undefined,
-                    }}
-                  >
-                    <span
-                      className="flex size-5 shrink-0 items-center justify-center border text-[10px]"
-                      style={{
-                        borderColor: isSelected ? 'var(--accent)' : 'var(--border-glass-strong)',
-                        backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-                        color: isSelected ? 'white' : 'var(--text-muted)',
-                      }}
-                    >
-                      {isSelected ? '✓' : ''}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                        <LeagueLogo logo={fixture.leagueLogo} flag={fixture.flag} name={fixture.leagueName} className="size-3 shrink-0" />
-                        <span>{fixture.leagueName}</span>
-                        <span>·</span>
-                        <span>{fixture.time}</span>
-                      </div>
-                      <p className="mt-0.5 truncate text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                        {fixture.homeTeam} vs {fixture.awayTeam}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="flex gap-1.5 font-mono text-[10px] tabular">
-                        <span style={{ color: 'var(--win)' }}>{prob.homeWin}%</span>
-                        <span style={{ color: 'var(--draw)' }}>{prob.draw}%</span>
-                        <span style={{ color: 'var(--lose)' }}>{prob.awayWin}%</span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="w-full lg:w-1/2">
+          {/* Settings */}
           <div className="glass mb-3 p-3">
             <button
               type="button"
@@ -283,7 +287,7 @@ export function KellyCalculatorPage() {
             >
               <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
                 <Wallet className="size-3.5" />
-                Bankroll & Risk Settings
+                Settings
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="font-mono text-[10px] tabular" style={{ color: 'var(--text-secondary)' }}>
@@ -295,37 +299,7 @@ export function KellyCalculatorPage() {
             {settingsOpen && (
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <label>
-                  <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Bankroll ({currency})</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step={portfolio.settings.minimumStakeUnit}
-                    value={portfolio.settings.bankroll || ''}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      updateSettings({ bankroll: Number.isFinite(v) ? v : 0 });
-                    }}
-                    className="w-full rounded border bg-transparent px-2 py-1.5 font-mono text-xs"
-                    style={{ borderColor: 'var(--border-glass-strong)', color: 'var(--text-primary)' }}
-                  />
-                </label>
-                <label>
-                  <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Min edge (%)</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={portfolio.settings.minimumEdgePercent}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      updateSettings({ minimumEdgePercent: Number.isFinite(v) ? v : 0 });
-                    }}
-                    className="w-full rounded border bg-transparent px-2 py-1.5 font-mono text-xs"
-                    style={{ borderColor: 'var(--border-glass-strong)', color: 'var(--text-primary)' }}
-                  />
-                </label>
-                <label>
-                  <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Max stake</span>
+                  <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Max Bet ({currency})</span>
                   <input
                     type="number"
                     min="0"
@@ -355,7 +329,7 @@ export function KellyCalculatorPage() {
                   </select>
                 </label>
                 <div className="sm:col-span-2">
-                  <span className="mb-1 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Risk mode</span>
+                  <span className="mb-1 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Risk Mode</span>
                   <div className="flex gap-1.5">
                     {(Object.keys(KELLY_RISK_MODES) as KellyRiskMode[]).map((mode) => {
                       const active = (portfolio.settings.riskMode ?? 'moderate') === mode;
@@ -381,81 +355,191 @@ export function KellyCalculatorPage() {
             )}
           </div>
 
-          {selectedFixtures.length === 0 && stagedBets.length === 0 && (
-            <div className="glass flex h-48 items-center justify-center p-6 text-center">
-              <div>
-                <p className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>No fixture selected</p>
-                <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Select fixtures from the left to calculate Kelly stakes.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {selectedFixtures.length > 0 && (
+          {/* Fixtures List */}
+          {loading && (
             <div className="space-y-2">
-              <p className="mb-1 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                {selectedFixtures.length} fixture{selectedFixtures.length !== 1 ? 's' : ''} · enter H/D/A odds
-              </p>
-              {selectedFixtures.map((fixture) => (
-                <div key={fixture.id} className="relative">
-                  <button
-                    onClick={() => removeFixture(fixture.id)}
-                    className="absolute right-2 top-2 z-10 rounded p-0.5 transition-colors"
-                    style={{ color: 'var(--text-muted)' }}
-                    aria-label="Remove"
-                  >
-                    <X className="size-3" />
-                  </button>
-                  <CompactKellyCard
-                    fixture={fixture}
-                    bankroll={portfolio.settings.bankroll}
-                    riskMode={portfolio.settings.riskMode ?? 'moderate'}
-                    minimumEdgePercent={portfolio.settings.minimumEdgePercent}
-                    minimumStakeUnit={portfolio.settings.minimumStakeUnit}
-                    maximumStake={portfolio.settings.maximumStake}
-                    currency={currency}
-                    onStage={stageBet}
-                  />
-                </div>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="glass h-20 animate-pulse" />
               ))}
             </div>
           )}
 
-          {stagedBets.length > 0 && (
-            <div className="glass mt-3 p-3">
-              <div className="flex items-center justify-between">
-                <p className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                  Staged ({stagedBets.length}) · Total {formatCurrency(totalStaked, currency)}
-                </p>
-                <button
-                  type="button"
-                  onClick={confirmAll}
-                  className="rounded px-3 py-1.5 text-[10px] font-semibold"
-                  style={{ backgroundColor: 'var(--accent)', color: 'white' }}
-                >
-                  Confirm All
-                </button>
-              </div>
-              <div className="mt-2 space-y-1">
-                {stagedBets.map((bet, i) => (
-                  <div key={i} className="flex items-center justify-between rounded px-2 py-1.5 text-[11px]" style={{ backgroundColor: 'var(--surface)' }}>
-                    <span className="truncate" style={{ color: 'var(--text-primary)' }}>
-                      {bet.fixtureLabel} · <span style={{ color: 'var(--accent)' }}>{bet.selection.toUpperCase()}</span>
-                    </span>
-                    <span className="ml-2 flex items-center gap-2 shrink-0">
-                      <span className="font-mono tabular" style={{ color: 'var(--text-secondary)' }}>
-                        {bet.odds[bet.selection].toFixed(2)} · {formatCurrency(bet.recommendedStake, currency)}
-                      </span>
-                      <button onClick={() => removeStaged(i)} style={{ color: 'var(--text-muted)' }}>
-                        <X className="size-3" />
-                      </button>
-                    </span>
-                  </div>
-                ))}
-              </div>
+          {!loading && error && (
+            <div className="glass p-4 text-center" style={{ borderColor: 'var(--lose)' }}>
+              <p className="text-xs" style={{ color: 'var(--lose)' }}>{error}</p>
             </div>
           )}
+
+          {!loading && !error && sorted.length === 0 && (
+            <div className="glass p-6 text-center">
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>No fixtures available for this date.</p>
+            </div>
+          )}
+
+          {!loading && sorted.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+                  {sorted.length} fixtures · {autoBets.length} with edge
+                </p>
+                {oddsLoading && (
+                  <p className="flex items-center gap-1 font-mono text-[10px]" style={{ color: 'var(--accent)' }}>
+                    <Zap className="size-3 animate-pulse" /> Fetching odds...
+                  </p>
+                )}
+              </div>
+              {sorted.map((fixture) => {
+                const hasBet = autoBets.some(b => b.fixtureId === fixture.id);
+                const prob = fixture.prediction.probabilities;
+                return (
+                  <div
+                    key={fixture.id}
+                    className="glass flex items-center gap-3 p-3"
+                    style={{
+                      borderColor: hasBet ? 'var(--win)' : 'var(--border-glass)',
+                      opacity: hasBet ? 1 : 0.5,
+                    }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                        <LeagueLogo logo={fixture.leagueLogo} flag={fixture.flag} name={fixture.leagueName} className="size-3 shrink-0" />
+                        <span>{fixture.leagueName}</span>
+                        <span>·</span>
+                        <span>{fixture.time}</span>
+                      </div>
+                      <p className="mt-0.5 truncate text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        {fixture.homeTeam} vs {fixture.awayTeam}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TeamLogo logo={fixture.homeTeamLogo} name={fixture.homeTeam} className="size-5 shrink-0" />
+                      <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>vs</span>
+                      <TeamLogo logo={fixture.awayTeamLogo} name={fixture.awayTeam} className="size-5 shrink-0" />
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {hasBet ? (
+                        <span className="flex items-center gap-1 text-[10px] font-semibold" style={{ color: 'var(--win)' }}>
+                          <TrendingUp className="size-3" /> Edge found
+                        </span>
+                      ) : (
+                        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>No edge</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Right: Auto-detected Bets */}
+        <div className="w-full lg:w-1/2">
+          <div className="glass p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                <TrendingUp className="size-3.5" />
+                Auto-Detected Positive EV Bets
+              </h3>
+              {autoBets.length > 0 && (
+                <div className="flex gap-1.5">
+                  <button onClick={selectAll} className="font-mono text-[9px] underline" style={{ color: 'var(--accent)' }}>All</button>
+                  <button onClick={selectNone} className="font-mono text-[9px] underline" style={{ color: 'var(--text-muted)' }}>None</button>
+                </div>
+              )}
+            </div>
+
+            {autoBets.length === 0 && !oddsLoading && (
+              <div className="py-8 text-center">
+                <AlertTriangle className="mx-auto mb-2 size-6" style={{ color: 'var(--text-muted)' }} />
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  No positive EV bets found for this date.
+                </p>
+                <p className="mt-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  Try a different date or adjust risk mode.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {autoBets.map((bet, index) => {
+                const isSelected = selectedBetIds.has(index);
+                const outcomeLabel = bet.selection === 'home' ? bet.fixture.homeTeam :
+                  bet.selection === 'away' ? bet.fixture.awayTeam : 'Draw';
+                return (
+                  <button
+                    key={`${bet.fixtureId}-${bet.selection}`}
+                    onClick={() => toggleBet(index)}
+                    className="glass flex w-full items-start gap-3 p-3 text-left transition-colors"
+                    style={{
+                      borderColor: isSelected ? 'var(--win)' : 'var(--border-glass)',
+                      backgroundColor: isSelected ? 'rgba(34, 197, 94, 0.05)' : undefined,
+                    }}
+                  >
+                    <span
+                      className="mt-0.5 flex size-5 shrink-0 items-center justify-center border text-[10px]"
+                      style={{
+                        borderColor: isSelected ? 'var(--win)' : 'var(--border-glass-strong)',
+                        backgroundColor: isSelected ? 'var(--win)' : 'transparent',
+                        color: isSelected ? 'white' : 'var(--text-muted)',
+                      }}
+                    >
+                      {isSelected ? '✓' : ''}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                        <LeagueLogo logo={bet.fixture.leagueLogo} flag={bet.fixture.flag} name={bet.fixture.leagueName} className="size-3 shrink-0" />
+                        <span>{bet.fixture.leagueName}</span>
+                      </div>
+                      <p className="mt-0.5 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        {outcomeLabel}
+                      </p>
+                      <div className="mt-1 flex gap-3 font-mono text-[10px] tabular">
+                        <span style={{ color: 'var(--text-secondary)' }}>Odds: {bet.odds[bet.selection].toFixed(2)}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>Edge: <span style={{ color: 'var(--win)' }}>{bet.edge.toFixed(1)}%</span></span>
+                      </div>
+                      <div className="mt-1 flex gap-3 font-mono text-[10px] tabular">
+                        <span style={{ color: 'var(--text-secondary)' }}>Model: {bet.modelProb.toFixed(1)}%</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>Market: {bet.marketProb.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-mono text-sm font-bold" style={{ color: 'var(--win)' }}>
+                        {formatCurrency(bet.kellyStake, currency)}
+                      </p>
+                      <p className="font-mono text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                        → {formatCurrency(bet.potentialReturn, currency)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {autoBets.length > 0 && (
+              <div className="mt-4 border-t pt-3" style={{ borderColor: 'var(--border-glass)' }}>
+                <div className="mb-3 flex justify-between font-mono text-xs tabular">
+                  <span style={{ color: 'var(--text-secondary)' }}>{selectedBetIds.size} bets selected</span>
+                  <span style={{ color: 'var(--text-primary)' }}>Stake: {formatCurrency(totalStake, currency)}</span>
+                </div>
+                <div className="mb-3 flex justify-between font-mono text-[10px] tabular">
+                  <span style={{ color: 'var(--text-secondary)' }}>Potential return</span>
+                  <span style={{ color: 'var(--win)' }}>{formatCurrency(totalReturn, currency)}</span>
+                </div>
+                <button
+                  onClick={confirmBets}
+                  disabled={selectedBetIds.size === 0}
+                  className="flex w-full items-center justify-center gap-2 rounded py-2.5 text-xs font-semibold transition-colors disabled:opacity-40"
+                  style={{
+                    backgroundColor: selectedBetIds.size > 0 ? 'var(--win)' : 'var(--surface)',
+                    color: selectedBetIds.size > 0 ? 'white' : 'var(--text-muted)',
+                  }}
+                >
+                  <CheckCircle2 className="size-3.5" />
+                  Confirm {selectedBetIds.size} Bets
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
