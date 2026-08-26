@@ -7,6 +7,35 @@ import { LEAGUES, LEAGUE_LIST, findLeague } from '../config/leagues.js';
 import { predictMatch } from './predictionEngine.js';
 import { fdFetch, parseKeys } from './fdClient.js';
 
+const PL_LOGOS = {
+  'Arsenal': 'https://resources.premierleague.com/premierleague/badges/rb/t3.svg',
+  'Aston Villa': 'https://resources.premierleague.com/premierleague/badges/rb/t7.svg',
+  'Bournemouth': 'https://resources.premierleague.com/premierleague/badges/rb/t91.svg',
+  'Brentford': 'https://resources.premierleague.com/premierleague/badges/rb/t94.svg',
+  'Brighton and Hove Albion': 'https://resources.premierleague.com/premierleague/badges/rb/t36.svg',
+  'Chelsea': 'https://resources.premierleague.com/premierleague/badges/rb/t8.svg',
+  'Coventry City': 'https://resources.premierleague.com/premierleague/badges/rb/t34.svg',
+  'Crystal Palace': 'https://resources.premierleague.com/premierleague/badges/rb/t31.svg',
+  'Everton': 'https://resources.premierleague.com/premierleague/badges/rb/t11.svg',
+  'Fulham': 'https://resources.premierleague.com/premierleague/badges/rb/t54.svg',
+  'Hull City': 'https://resources.premierleague.com/premierleague/badges/rb/t46.svg',
+  'Ipswich Town': 'https://resources.premierleague.com/premierleague/badges/rb/t39.svg',
+  'Leeds United': 'https://resources.premierleague.com/premierleague/badges/rb/t2.svg',
+  'Liverpool': 'https://resources.premierleague.com/premierleague/badges/rb/t14.svg',
+  'Manchester City': 'https://resources.premierleague.com/premierleague/badges/rb/t43.svg',
+  'Manchester United': 'https://resources.premierleague.com/premierleague/badges/rb/t1.svg',
+  'Newcastle United': 'https://resources.premierleague.com/premierleague/badges/rb/t4.svg',
+  'Nottingham Forest': 'https://resources.premierleague.com/premierleague/badges/rb/t17.svg',
+  'Sunderland': 'https://resources.premierleague.com/premierleague/badges/rb/t56.svg',
+  'Tottenham Hotspur': 'https://resources.premierleague.com/premierleague/badges/rb/t6.svg',
+  'West Ham United': 'https://resources.premierleague.com/premierleague/badges/rb/t21.svg',
+  'Wolverhampton Wanderers': 'https://resources.premierleague.com/premierleague/badges/rb/t39.svg',
+};
+
+function getPlLogo(teamName) {
+  return PL_LOGOS[teamName] || null;
+}
+
 export function formatDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -199,8 +228,8 @@ async function fetchEspnFixtures(targetDate, targetLeagues, options = {}) {
 
           const stats = extractMatchStats(comp, homeComp, awayComp);
 
-          const homeLogo = homeComp?.team?.logo || homeComp?.team?.logos?.[0]?.href || null;
-          const awayLogo = awayComp?.team?.logo || awayComp?.team?.logos?.[0]?.href || null;
+          const homeLogo = homeComp?.team?.logo || homeComp?.team?.logos?.[0]?.href || getPlLogo(homeName);
+          const awayLogo = awayComp?.team?.logo || awayComp?.team?.logos?.[0]?.href || getPlLogo(awayName);
 
           const timeStr = ev.date
             ? new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -345,8 +374,8 @@ export async function getDailyFixtures(dateStr = null, leagueFilter = null, opti
           time: timeStr,
           homeTeam: homeName,
           awayTeam: awayName,
-          homeTeamLogo: lm.homeTeam?.crest || null,
-          awayTeamLogo: lm.awayTeam?.crest || null,
+          homeTeamLogo: lm.homeTeam?.crest || getPlLogo(homeName),
+          awayTeamLogo: lm.awayTeam?.crest || getPlLogo(awayName),
           stadium: lm.venue || `${homeName} Stadium`,
           matchType: lm.stage ? lm.stage.replace(/_/g, ' ') : 'Official Match',
           prediction: pred
