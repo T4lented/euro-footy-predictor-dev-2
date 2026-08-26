@@ -44,10 +44,11 @@ export function Navbar({ query, onQueryChange, theme, onToggleTheme, onOpenMenu,
             <h1 className="font-display text-sm font-bold tracking-tight sm:text-base" style={{ color: 'var(--text-primary)' }}>
               EURO FOOTY PREDICTOR
             </h1>
-            <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
-              Top leagues & UEFA · 12-factor engine
-              {activeLeagueLabel ? ` · ${activeLeagueLabel}` : ''}
-            </span>
+            {activeLeagueLabel && (
+              <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                {activeLeagueLabel}
+              </span>
+            )}
           </div>
         </div>
 
