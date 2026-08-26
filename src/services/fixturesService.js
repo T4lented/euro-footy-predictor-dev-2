@@ -259,66 +259,6 @@ function findMatchingEvent(fixture, events) {
   }) || null;
 }
 
-/**
- * Predict match outcome using historical data, team strength, and factors
- */
-function predictMatch(homeTeam, awayTeam, leagueCode, h2h = null, formMap = null) {
-  const league = LEAGUES[leagueCode] || {};
-  const avgGoals = league.avgGoalsPerGame || 2.65;
-  const homeAdv = league.homeAdvantageBase || 1.15;
-
-  const form = formMap || {};
-  const homeForm = form[homeTeam] || { wins: 3, draws: 1, losses: 1, goalsFor: 7, goalsAgainst: 4 };
-  const awayForm = form[awayTeam] || { wins: 2, draws: 1, losses: 2, goalsFor: 5, goalsAgainst: 5 };
-
-  const homeAttack = (homeForm.goalsFor / Math.max(1, homeForm.wins + homeForm.draws + homeForm.losses)) * 1.1;
-  const homeDefense = (homeForm.goalsAgainst / Math.max(1, homeForm.wins + homeForm.draws + homeForm.losses)) * 0.9;
-  const awayAttack = (awayForm.goalsFor / Math.max(1, awayForm.wins + awayForm.draws + awayForm.losses)) * 0.95;
-  const awayDefense = (awayForm.goalsAgainst / Math.max(1, awayForm.wins + awayForm.draws + awayForm.losses)) * 1.0;
-
-  const homeStr = (homeAttack + (1 - homeDefense)) * homeAdv;
-  const awayStr = (awayAttack + (1 - awayDefense));
-
-  const total = homeStr + awayStr;
-  const homeXG = (homeStr / total) * avgGoals * 1.15;
-  const awayXG = (awayStr / total) * avgGoals * 0.88;
-
-  const homeProb = Math.min(0.65, Math.max(0.2, homeStr / total * 0.55 + 0.05));
-  const drawProb = Math.min(0.35, Math.max(0.15, 0.26 - Math.abs(homeStr - awayStr) * 0.1));
-  const awayProb = 1 - homeProb - drawProb;
-
-  let confidence = 'Moderate';
-  const diff = Math.abs(homeProb - awayProb);
-  if (diff > 0.25) confidence = 'Very High';
-  else if (diff > 0.15) confidence = 'High';
-  else if (diff < 0.05) confidence = 'Low (Contested)';
-
-  return {
-    homeTeam,
-    awayTeam,
-    probabilities: {
-      home: Math.round(homeProb * 100),
-      draw: Math.round(drawProb * 100),
-      away: Math.round(awayProb * 100),
-    },
-    expectedGoals: {
-      home: homeXG.toFixed(2),
-      away: awayXG.toFixed(2),
-    },
-    confidence,
-    factors: {
-      homeAdvantage: Math.round(homeAdv * 100),
-      formRating: Math.round((homeForm.wins / Math.max(1, homeForm.wins + homeForm.draws + homeForm.losses) - awayForm.wins / Math.max(1, awayForm.wins + awayForm.draws + awayForm.losses)) * 100),
-      attackStrength: Math.round(homeAttack * 100),
-      defenseStrength: Math.round((1 - homeDefense) * 100),
-      leagueAvgGoals: avgGoals,
-      goalDiffHome: homeForm.goalsFor - homeForm.goalsAgainst,
-      goalDiffAway: awayForm.goalsFor - awayForm.goalsAgainst,
-      headToHead: h2h,
-    },
-  };
-}
-
 const WANTED_STATS = ['Corners', 'Shots on Goal', 'Fouls', 'Possession', 'Yellow Cards', 'Red Cards', 'Offsides'];
 
 function extractMatchStats(comp, homeComp, awayComp) {
