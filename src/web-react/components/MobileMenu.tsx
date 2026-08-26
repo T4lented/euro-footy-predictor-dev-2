@@ -41,7 +41,7 @@ export function MobileMenu({ open, onClose, leagues, activeCode, counts, onSelec
       <aside className="glass absolute left-0 top-0 flex h-full w-[min(100%,20rem)] flex-col border-y-0 border-l-0 shadow-xl">
         <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: 'var(--border-glass)' }}>
           <span className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Filter by league
+            Filter by competition
           </span>
           <button
             type="button"
