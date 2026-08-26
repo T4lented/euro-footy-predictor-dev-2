@@ -259,7 +259,7 @@ function findMatchingEvent(fixture, events) {
   }) || null;
 }
 
-const WANTED_STATS = ['Corners', 'Shots on Goal', 'Fouls', 'Possession', 'Yellow Cards', 'Red Cards', 'Offsides'];
+const WANTED_STATS = ['Possession', 'Total Shots', 'Shots on Target', 'Shots on Goal', 'Corners', 'Fouls', 'Yellow Cards', 'Red Cards', 'Offsides', 'Passes', 'Pass Accuracy', 'Saves', 'Tackles', 'Interceptions'];
 
 function extractMatchStats(comp, homeComp, awayComp) {
   const raw = comp?.statistics || [];

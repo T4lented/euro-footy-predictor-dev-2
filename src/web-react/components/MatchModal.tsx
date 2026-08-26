@@ -1,46 +1,37 @@
 import { useEffect, useState, useCallback } from 'react';
 import { X, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
-import type { Fixture } from '../types';
+import type { Fixture, StatRow } from '../types';
 import { TeamLogo } from './TeamLogo';
 import { LeagueLogo } from './LeagueLogo';
-import { fetchMatchStats, buildStatRows, type MatchStatsResponse } from '../services/matchStats';
 
 interface MatchModalProps {
   fixture: Fixture | null;
   onClose: () => void;
 }
 
+const STAT_LABELS: Record<string, string> = {
+  Possession: 'Possession',
+  'Total Shots': 'Total Shots',
+  'Shots on Goal': 'Shots on Target',
+  'Shots on Target': 'Shots on Target',
+  Corners: 'Corners',
+  Fouls: 'Fouls',
+  'Yellow Cards': 'Yellow Cards',
+  'Red Cards': 'Red Cards',
+  Offsides: 'Offsides',
+  Passes: 'Passes',
+  'Pass Accuracy': 'Pass Accuracy',
+  Saves: 'Saves',
+  Tackles: 'Tackles',
+  Interceptions: 'Interceptions',
+};
+
+function formatStatName(name: string): string {
+  return STAT_LABELS[name] || name;
+}
+
 export function MatchModal({ fixture, onClose }: MatchModalProps) {
   const [factorOpen, setFactorOpen] = useState(false);
-  const [liveStats, setLiveStats] = useState<MatchStatsResponse | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [statsError, setStatsError] = useState<string | null>(null);
-
-  const loadStats = useCallback(async () => {
-    if (!fixture?.espnEventId || !fixture?.live || fixture.live.state === 'pre') return;
-    setStatsLoading(true);
-    setStatsError(null);
-    try {
-      const data = await fetchMatchStats(fixture.espnLeagueCode || fixture.leagueCode, fixture.espnEventId);
-      if (data) {
-        setLiveStats(data);
-      } else {
-        setStatsError('Stats unavailable');
-      }
-    } catch {
-      setStatsError('Failed to load stats');
-    } finally {
-      setStatsLoading(false);
-    }
-  }, [fixture?.espnEventId, fixture?.leagueCode, fixture?.live]);
-
-  useEffect(() => { loadStats(); }, [loadStats]);
-
-  useEffect(() => {
-    if (!fixture?.espnEventId || !fixture?.live || fixture.live.state !== 'in') return;
-    const interval = setInterval(loadStats, 30000);
-    return () => clearInterval(interval);
-  }, [fixture?.espnEventId, fixture?.live, loadStats]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
@@ -51,8 +42,7 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
   if (!fixture) return null;
   const { prediction } = fixture;
   const isLiveOrFinished = fixture.live && fixture.live.state !== 'pre';
-  const hasStats = liveStats?.stats;
-  const statRows = hasStats ? buildStatRows(liveStats!.stats!.home.stats, liveStats!.stats!.away.stats) : [];
+  const stats: StatRow[] = fixture.stats || [];
 
   return (
     <div
@@ -102,42 +92,16 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
                 </div>
               </div>
 
-              {fixture.espnEventId && (
-                <div className="mt-3 flex justify-center">
-                  <button
-                    onClick={loadStats}
-                    disabled={statsLoading}
-                    className="flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] uppercase tracking-wide transition-colors"
-                    style={{ backgroundColor: 'var(--bg-elevated)', color: statsLoading ? 'var(--text-muted)' : 'var(--accent)', border: '1px solid var(--border-glass)' }}
-                  >
-                    <RefreshCw className={`size-3 ${statsLoading ? 'animate-spin' : ''}`} />
-                    {statsLoading ? 'Loading...' : 'Refresh Stats'}
-                  </button>
-                </div>
-              )}
-
-              {statRows.length > 0 && (
+              {stats.length > 0 && (
                 <div className="mt-4 space-y-1.5 border-t pt-3" style={{ borderColor: 'var(--border-glass)' }}>
-                  <p className="mb-1 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Live match stats</p>
-                  {statRows.map((s) => (
-                    <div key={s.key} className="flex items-center justify-between font-mono text-[11px] tabular">
+                  <p className="mb-1 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Match stats</p>
+                  {stats.map((s) => (
+                    <div key={s.name} className="flex items-center justify-between font-mono text-[11px] tabular">
                       <span className="w-8 shrink-0 text-right font-bold" style={{ color: 'var(--text-primary)' }}>{s.home}</span>
-                      <span className="px-2 uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{s.label}</span>
+                      <span className="px-2 uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{formatStatName(s.name)}</span>
                       <span className="w-8 shrink-0 font-bold" style={{ color: 'var(--text-primary)' }}>{s.away}</span>
                     </div>
                   ))}
-                </div>
-              )}
-
-              {!hasStats && statsLoading && (
-                <div className="mt-4 border-t pt-3" style={{ borderColor: 'var(--border-glass)' }}>
-                  <p className="text-center font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Loading match stats...</p>
-                </div>
-              )}
-
-              {statsError && !statsLoading && (
-                <div className="mt-4 border-t pt-3" style={{ borderColor: 'var(--border-glass)' }}>
-                  <p className="text-center font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{statsError}</p>
                 </div>
               )}
             </div>
