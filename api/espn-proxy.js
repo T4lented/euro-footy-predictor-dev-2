@@ -1,8 +1,14 @@
 import { LEAGUE_LIST } from '../src/config/leagues.js';
+import { checkRateLimit } from './_rateLimit.js';
 
 const VALID_LEAGUES = new Set(LEAGUE_LIST.map(l => l.espnCode).filter(Boolean));
 
 export default async function handler(req, res) {
+  const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+  if (!checkRateLimit(ip)) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Try again later.' });
+  }
+
   const { league, date } = req.query;
 
   if (!league || !VALID_LEAGUES.has(String(league))) {

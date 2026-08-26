@@ -20,7 +20,7 @@ try {
     fs.unlinkSync(zipOutput);
   }
 
-  const excludeItems = ['node_modules', '.git', 'euro-footy-predictor.zip'];
+  const excludeItems = ['node_modules', '.git', 'euro-footy-predictor.zip', '.env', '.env.*'];
   const itemsToZip = fs.readdirSync(rootDir).filter(item => !excludeItems.includes(item));
 
   const psQuote = value => `'${String(value).replace(/'/g, "''")}'`;

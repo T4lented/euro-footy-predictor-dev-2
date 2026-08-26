@@ -63,7 +63,7 @@ function vercelApiPlugin() {
           console.error('API handler error:', err);
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'Internal server error', details: err.message }));
+          res.end(JSON.stringify({ error: 'Internal server error' }));
         }
       });
     },

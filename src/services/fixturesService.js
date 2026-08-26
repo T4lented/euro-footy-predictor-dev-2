@@ -428,17 +428,7 @@ async function fetchFootballDataOrgFixtures(dateStr) {
     }
   }
 
-  const rawKeys = typeof process !== 'undefined' ? process.env?.FOOTBALL_DATA_API_KEY : undefined;
-
-  if (!rawKeys || !parseKeys(rawKeys).length) return null;
-
-  try {
-    const res = await fdFetch(`matches?dateFrom=${dateStr}&dateTo=${dateStr}`, rawKeys);
-    const data = await res.json();
-    return data.matches || [];
-  } catch (err) {
-    return null;
-  }
+  return null;
 }
 
 /**

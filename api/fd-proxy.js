@@ -1,6 +1,12 @@
 import { fdFetch } from '../src/services/fdClient.js';
+import { checkRateLimit } from './_rateLimit.js';
 
 export default async function handler(req, res) {
+  const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+  if (!checkRateLimit(ip)) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Try again later.' });
+  }
+
   const { date } = req.query;
 
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
@@ -18,6 +24,6 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
     return res.status(200).json({ matches: data.matches || [] });
   } catch (err) {
-    return res.status(err?.statusCode || 502).json({ error: err?.noKey ? 'Football-Data.org API key not configured on the server' : 'Upstream unavailable' });
+    return res.status(err?.statusCode || 502).json({ error: 'Upstream unavailable' });
   }
 }

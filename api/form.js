@@ -1,8 +1,14 @@
 import { fdFetch, AllKeysFailedError } from '../src/services/fdClient.js';
+import { checkRateLimit } from './_rateLimit.js';
 
 const DAY_MS = 86400000;
 
 export default async function handler(req, res) {
+  const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+  if (!checkRateLimit(ip)) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Try again later.' });
+  }
+
   const { date, days = '35' } = req.query;
 
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
@@ -85,6 +91,6 @@ export default async function handler(req, res) {
   } catch (err) {
     return res
       .status(err instanceof AllKeysFailedError ? err.statusCode : 502)
-      .json({ error: err?.noKey ? 'Football-Data.org API key not configured on the server' : 'Upstream unavailable' });
+      .json({ error: 'Upstream unavailable' });
   }
 }
