@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Fixture } from '../types';
 
 interface MatchModalProps {
@@ -8,6 +8,8 @@ interface MatchModalProps {
 }
 
 export function MatchModal({ fixture, onClose }: MatchModalProps) {
+  const [factorOpen, setFactorOpen] = useState(false);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -158,39 +160,6 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
             </div>
           </div>
 
-          <div>
-            <h4 className="mb-2 font-mono text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>12-factor breakdown</h4>
-            <div className="space-y-2">
-              {prediction.factorDiffs.map((f) => (
-                <div key={f.key} className="flex items-center gap-3">
-                  <span className="w-40 shrink-0 truncate text-xs" style={{ color: 'var(--text-primary)' }} title={f.name}>
-                    <span className="mr-1.5">{f.icon}</span>
-                    {f.name}
-                  </span>
-                  <div className="relative h-1.5 flex-1" style={{ backgroundColor: 'var(--border-glass)' }}>
-                    <div className="absolute inset-y-0 left-1/2 w-px" style={{ backgroundColor: 'var(--border-glass-strong)' }} />
-                    {f.favors === 'HOME' && (
-                      <div
-                        className="absolute inset-y-0 right-1/2"
-                        style={{ width: `${Math.min(50, Math.abs(f.diff) * 10)}%`, backgroundColor: 'var(--home)' }}
-                      />
-                    )}
-                    {f.favors === 'AWAY' && (
-                      <div
-                        className="absolute inset-y-0 left-1/2"
-                        style={{ width: `${Math.min(50, Math.abs(f.diff) * 10)}%`, backgroundColor: 'var(--away)' }}
-                      />
-                    )}
-                  </div>
-                  <span className="w-16 shrink-0 text-right font-mono text-[10px] tabular" style={{ color: 'var(--text-muted)' }}>
-                    {f.homeScore.toFixed(1)} / {f.awayScore.toFixed(1)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* NEW: H2H Section - Display real data from ESPN */}
           {prediction.h2h && (prediction.h2h.totalMatches ?? 0) > 0 ? (
             <div className="glass p-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
               <div className="flex flex-wrap items-center gap-2">
@@ -202,12 +171,11 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
                 <span style={{ color: 'var(--win)' }}>{prediction.h2h.homeWins || 0}W</span>
                 <span style={{ color: 'var(--draw)' }}>{prediction.h2h.draws || 0}D</span>
                 <span style={{ color: 'var(--lose)' }}>{prediction.h2h.awayWins || 0}L</span>
-                
-                {/* Show last 5 meetings if available */}
+
                 {prediction.h2h.last5Meetings && prediction.h2h.last5Meetings.length > 0 && (
                   <>
                     <span className="ml-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                      · Last 5: 
+                      · Last 5:
                     </span>
                     {prediction.h2h.last5Meetings.slice(0, 3).map((m, i) => (
                       <span key={i} className="text-[10px]">
@@ -220,8 +188,8 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
                     )}
                   </>
                 )}
-                
-                {prediction.h2h.derbyOrRivalry ? ' · 🔥 rivalry fixture' : ''}
+
+                {prediction.h2h.derbyOrRivalry ? ' · rivalry fixture' : ''}
               </div>
             </div>
           ) : (
@@ -229,6 +197,48 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
               <span style={{ color: 'var(--text-muted)' }}>No historical H2H data available for this fixture.</span>
             </div>
           )}
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setFactorOpen((o) => !o)}
+              className="flex w-full items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {factorOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+              12-factor breakdown
+            </button>
+            {factorOpen && (
+              <div className="mt-2 space-y-2">
+                {prediction.factorDiffs.map((f) => (
+                  <div key={f.key} className="flex items-center gap-3">
+                    <span className="w-40 shrink-0 truncate text-xs" style={{ color: 'var(--text-primary)' }} title={f.name}>
+                      <span className="mr-1.5">{f.icon}</span>
+                      {f.name}
+                    </span>
+                    <div className="relative h-1.5 flex-1" style={{ backgroundColor: 'var(--border-glass)' }}>
+                      <div className="absolute inset-y-0 left-1/2 w-px" style={{ backgroundColor: 'var(--border-glass-strong)' }} />
+                      {f.favors === 'HOME' && (
+                        <div
+                          className="absolute inset-y-0 right-1/2"
+                          style={{ width: `${Math.min(50, Math.abs(f.diff) * 10)}%`, backgroundColor: 'var(--home)' }}
+                        />
+                      )}
+                      {f.favors === 'AWAY' && (
+                        <div
+                          className="absolute inset-y-0 left-1/2"
+                          style={{ width: `${Math.min(50, Math.abs(f.diff) * 10)}%`, backgroundColor: 'var(--away)' }}
+                        />
+                      )}
+                    </div>
+                    <span className="w-16 shrink-0 text-right font-mono text-[10px] tabular" style={{ color: 'var(--text-muted)' }}>
+                      {f.homeScore.toFixed(1)} / {f.awayScore.toFixed(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
