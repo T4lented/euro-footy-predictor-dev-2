@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getDailyFixtures } from '../../services/fixturesService.js';
 import { LEAGUE_LIST } from '../../config/leagues.js';
-import { KellyPanel } from './KellyPanel';
+import { CompactKellyCard } from './CompactKellyCard';
 import { useTheme } from '../hooks/useTheme';
 import { sanitizeSearchQuery, isValidDateString } from '../lib/validation';
 import { sortFixtures } from '../lib/export';
+import { KELLY_RISK_MODES, type KellyRiskMode, type OneX2Outcome } from '../lib/kelly';
+import {
+  formatCurrency,
+  loadPortfolio,
+  savePortfolio,
+  MINIMUM_STAKE_UNITS,
+  type PortfolioState,
+} from '../lib/portfolio';
 import type { Fixture, FixturesResponse, League } from '../types';
-import { Search, X } from 'lucide-react';
-
-const leagues = LEAGUE_LIST as League[];
+import { Search, X, Wallet, ChevronDown, ChevronRight } from 'lucide-react';
 
 function formatDate(d: Date) {
   const y = d.getFullYear();
@@ -33,6 +39,16 @@ function buildDateOptions() {
   return options;
 }
 
+interface StagedBet {
+  fixtureId: string;
+  fixtureLabel: string;
+  selection: OneX2Outcome;
+  odds: { home: number; draw: number; away: number };
+  modelProbabilityPercent: number;
+  recommendedStake: number;
+  riskMode: KellyRiskMode;
+}
+
 export function KellyCalculatorPage() {
   const [theme] = useTheme();
   const dateOptions = useMemo(buildDateOptions, []);
@@ -42,8 +58,16 @@ export function KellyCalculatorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFixtureIds, setSelectedFixtureIds] = useState<Set<string>>(new Set());
-  const [activeDetailFixture, setActiveDetailFixture] = useState<Fixture | null>(null);
   const [formMap, setFormMap] = useState<Record<string, { recentForm: string[]; formPoints: number }> | null>(null);
+  const [stagedBets, setStagedBets] = useState<StagedBet[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const [portfolio, setPortfolio] = useState<PortfolioState>(() => loadPortfolio());
+  useEffect(() => { savePortfolio(portfolio); }, [portfolio]);
+
+  function updateSettings(patch: Partial<PortfolioState['settings']>) {
+    setPortfolio((c) => ({ ...c, settings: { ...c.settings, ...patch } }));
+  }
 
   useEffect(() => {
     const today = formatDate(new Date());
@@ -102,12 +126,51 @@ export function KellyCalculatorPage() {
     });
   }
 
+  function removeFixture(id: string) {
+    setSelectedFixtureIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  function stageBet(bet: StagedBet) {
+    setStagedBets((prev) => [...prev, bet]);
+  }
+
+  function removeStaged(index: number) {
+    setStagedBets((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function confirmAll() {
+    if (stagedBets.length === 0) return;
+    const newBets = stagedBets.map((b) => ({
+      id: `${b.fixtureId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      fixtureId: b.fixtureId,
+      fixtureLabel: b.fixtureLabel,
+      selection: b.selection,
+      oddsAtCalculation: b.odds[b.selection],
+      calculatedStake: b.recommendedStake,
+      modelProbabilityPercent: b.modelProbabilityPercent,
+      riskMode: b.riskMode,
+      actualOdds: b.odds[b.selection],
+      actualStake: b.recommendedStake,
+      status: 'pending' as const,
+      createdAt: Date.now(),
+    }));
+    setPortfolio((c) => ({ ...c, bets: [...newBets, ...c.bets] }));
+    setStagedBets([]);
+  }
+
+  const currency = portfolio.settings.currency;
+  const totalStaked = stagedBets.reduce((sum, b) => sum + b.recommendedStake, 0);
+
   return (
     <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
       <div className="mb-6">
         <h2 className="font-display text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Kelly Calculator</h2>
         <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-          Select fixtures from the list below to size your stakes using the Kelly criterion. Enter your odds and bankroll to calculate optimal bet sizes.
+          Select fixtures, enter odds, and calculate optimal Kelly stakes. Bankroll and risk settings are shared across all selections.
         </p>
       </div>
 
@@ -211,47 +274,189 @@ export function KellyCalculatorPage() {
         </div>
 
         <div className="w-full lg:w-1/2">
-          {selectedFixtures.length === 0 && (
-            <div className="glass flex h-64 items-center justify-center p-6 text-center">
+          <div className="glass mb-3 p-3">
+            <button
+              type="button"
+              onClick={() => setSettingsOpen((o) => !o)}
+              className="flex w-full items-center justify-between"
+            >
+              <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                <Wallet className="size-3.5" />
+                Bankroll & Risk Settings
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="font-mono text-[10px] tabular" style={{ color: 'var(--text-secondary)' }}>
+                  {formatCurrency(portfolio.settings.bankroll, currency)} · {KELLY_RISK_MODES[portfolio.settings.riskMode ?? 'moderate'].label}
+                </span>
+                {settingsOpen ? <ChevronDown className="size-3.5" style={{ color: 'var(--text-muted)' }} /> : <ChevronRight className="size-3.5" style={{ color: 'var(--text-muted)' }} />}
+              </span>
+            </button>
+            {settingsOpen && (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label>
+                  <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Bankroll ({currency})</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step={portfolio.settings.minimumStakeUnit}
+                    value={portfolio.settings.bankroll || ''}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      updateSettings({ bankroll: Number.isFinite(v) ? v : 0 });
+                    }}
+                    className="w-full rounded border bg-transparent px-2 py-1.5 font-mono text-xs"
+                    style={{ borderColor: 'var(--border-glass-strong)', color: 'var(--text-primary)' }}
+                  />
+                </label>
+                <label>
+                  <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Min edge (%)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={portfolio.settings.minimumEdgePercent}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      updateSettings({ minimumEdgePercent: Number.isFinite(v) ? v : 0 });
+                    }}
+                    className="w-full rounded border bg-transparent px-2 py-1.5 font-mono text-xs"
+                    style={{ borderColor: 'var(--border-glass-strong)', color: 'var(--text-primary)' }}
+                  />
+                </label>
+                <label>
+                  <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Max stake</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step={portfolio.settings.minimumStakeUnit}
+                    value={portfolio.settings.maximumStake || ''}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      updateSettings({ maximumStake: v > 0 ? v : undefined });
+                    }}
+                    className="w-full rounded border bg-transparent px-2 py-1.5 font-mono text-xs"
+                    style={{ borderColor: 'var(--border-glass-strong)', color: 'var(--text-primary)' }}
+                  />
+                </label>
+                <label>
+                  <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Currency</span>
+                  <select
+                    value={currency}
+                    onChange={(e) => {
+                      const next = e.target.value as PortfolioState['settings']['currency'];
+                      updateSettings({ currency: next, minimumStakeUnit: MINIMUM_STAKE_UNITS[next] });
+                    }}
+                    className="w-full rounded border bg-transparent px-2 py-1.5 font-mono text-xs"
+                    style={{ borderColor: 'var(--border-glass-strong)', color: 'var(--text-primary)' }}
+                  >
+                    <option value="GBP">GBP (£)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="JPY">JPY (¥)</option>
+                  </select>
+                </label>
+                <div className="sm:col-span-2">
+                  <span className="mb-1 block font-mono text-[9px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Risk mode</span>
+                  <div className="flex gap-1.5">
+                    {(Object.keys(KELLY_RISK_MODES) as KellyRiskMode[]).map((mode) => {
+                      const active = (portfolio.settings.riskMode ?? 'moderate') === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => updateSettings({ riskMode: mode })}
+                          className="flex-1 rounded px-2 py-1.5 text-center text-[10px] font-semibold transition-colors"
+                          style={{
+                            backgroundColor: active ? 'var(--accent)' : 'var(--surface)',
+                            color: active ? 'white' : 'var(--text-secondary)',
+                            border: `1px solid ${active ? 'var(--accent)' : 'var(--border-glass)'}`,
+                          }}
+                        >
+                          {KELLY_RISK_MODES[mode].label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {selectedFixtures.length === 0 && stagedBets.length === 0 && (
+            <div className="glass flex h-48 items-center justify-center p-6 text-center">
               <div>
                 <p className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>No fixture selected</p>
                 <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Select one or more fixtures from the left panel to calculate Kelly stake sizes.
+                  Select fixtures from the left to calculate Kelly stakes.
                 </p>
               </div>
             </div>
           )}
 
-          {selectedFixtures.map((fixture) => (
-            <div key={fixture.id} className="mb-4">
-              <div className="glass mb-2 flex items-center justify-between p-3">
-                <div>
-                  <p className="flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                    <span>{fixture.flag}</span> {fixture.leagueName} · {fixture.time}
-                  </p>
-                  <p className="mt-0.5 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {fixture.homeTeam} vs {fixture.awayTeam}
-                  </p>
+          {selectedFixtures.length > 0 && (
+            <div className="space-y-2">
+              <p className="mb-1 font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+                {selectedFixtures.length} fixture{selectedFixtures.length !== 1 ? 's' : ''} · enter H/D/A odds
+              </p>
+              {selectedFixtures.map((fixture) => (
+                <div key={fixture.id} className="relative">
+                  <button
+                    onClick={() => removeFixture(fixture.id)}
+                    className="absolute right-2 top-2 z-10 rounded p-0.5 transition-colors"
+                    style={{ color: 'var(--text-muted)' }}
+                    aria-label="Remove"
+                  >
+                    <X className="size-3" />
+                  </button>
+                  <CompactKellyCard
+                    fixture={fixture}
+                    bankroll={portfolio.settings.bankroll}
+                    riskMode={portfolio.settings.riskMode ?? 'moderate'}
+                    minimumEdgePercent={portfolio.settings.minimumEdgePercent}
+                    minimumStakeUnit={portfolio.settings.minimumStakeUnit}
+                    maximumStake={portfolio.settings.maximumStake}
+                    currency={currency}
+                    onStage={stageBet}
+                  />
                 </div>
+              ))}
+            </div>
+          )}
+
+          {stagedBets.length > 0 && (
+            <div className="glass mt-3 p-3">
+              <div className="flex items-center justify-between">
+                <p className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+                  Staged ({stagedBets.length}) · Total {formatCurrency(totalStaked, currency)}
+                </p>
                 <button
-                  onClick={() => {
-                    setSelectedFixtureIds((prev) => {
-                      const next = new Set(prev);
-                      next.delete(fixture.id);
-                      return next;
-                    });
-                  }}
-                  className="glass p-1.5"
-                  style={{ color: 'var(--text-secondary)' }}
+                  type="button"
+                  onClick={confirmAll}
+                  className="rounded px-3 py-1.5 text-[10px] font-semibold"
+                  style={{ backgroundColor: 'var(--accent)', color: 'white' }}
                 >
-                  <X className="size-3.5" />
+                  Confirm All
                 </button>
               </div>
-              <div className="glass p-4">
-                <KellyPanel fixture={fixture} />
+              <div className="mt-2 space-y-1">
+                {stagedBets.map((bet, i) => (
+                  <div key={i} className="flex items-center justify-between rounded px-2 py-1.5 text-[11px]" style={{ backgroundColor: 'var(--surface)' }}>
+                    <span className="truncate" style={{ color: 'var(--text-primary)' }}>
+                      {bet.fixtureLabel} · <span style={{ color: 'var(--accent)' }}>{bet.selection.toUpperCase()}</span>
+                    </span>
+                    <span className="ml-2 flex items-center gap-2 shrink-0">
+                      <span className="font-mono tabular" style={{ color: 'var(--text-secondary)' }}>
+                        {bet.odds[bet.selection].toFixed(2)} · {formatCurrency(bet.recommendedStake, currency)}
+                      </span>
+                      <button onClick={() => removeStaged(i)} style={{ color: 'var(--text-muted)' }}>
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ export interface PortfolioSettings {
   minimumEdgePercent: number;
   minimumStakeUnit: number;
   maximumStake?: number;
+  riskMode?: KellyRiskMode;
 }
 
 export interface PortfolioBet {
@@ -46,7 +47,7 @@ export const PORTFOLIO_STORAGE_KEY = 'euro-footy-predictor-portfolio-v1';
 export const MINIMUM_STAKE_UNITS: Record<CurrencyCode, number> = { GBP: 0.01, EUR: 0.01, USD: 0.01, JPY: 1 };
 
 export function createPortfolio(currency: CurrencyCode = 'GBP'): PortfolioState {
-  return { version: 1, settings: { bankroll: 0, currency, minimumEdgePercent: 1, minimumStakeUnit: MINIMUM_STAKE_UNITS[currency] }, bets: [], cashFlows: [] };
+  return { version: 1, settings: { bankroll: 0, currency, minimumEdgePercent: 1, minimumStakeUnit: MINIMUM_STAKE_UNITS[currency], riskMode: 'moderate' }, bets: [], cashFlows: [] };
 }
 
 export function loadPortfolio(): PortfolioState {
