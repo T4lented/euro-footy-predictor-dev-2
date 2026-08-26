@@ -261,33 +261,39 @@ function findMatchingEvent(fixture, events) {
 
 const WANTED_STATS = ['Possession', 'Total Shots', 'Shots on Target', 'Shots on Goal', 'Corners', 'Fouls', 'Yellow Cards', 'Red Cards', 'Offsides', 'Passes', 'Pass Accuracy', 'Saves', 'Tackles', 'Interceptions'];
 
+const STAT_NAME_MAP = {
+  possessionPct: 'Possession',
+  totalShots: 'Total Shots',
+  shotsOnTarget: 'Shots on Target',
+  shotPct: 'Shot Accuracy',
+  wonCorners: 'Corners',
+  foulsCommitted: 'Fouls',
+  yellowCards: 'Yellow Cards',
+  redCards: 'Red Cards',
+  offsides: 'Offsides',
+  totalPasses: 'Passes',
+  passPct: 'Pass Accuracy',
+  saves: 'Saves',
+  totalTackles: 'Tackles',
+  interceptions: 'Interceptions',
+};
+
 function extractMatchStats(comp, homeComp, awayComp) {
-  const raw = comp?.statistics || [];
   const rows = [];
+  const hs = Array.isArray(homeComp?.statistics) ? homeComp.statistics : [];
+  const as = Array.isArray(awayComp?.statistics) ? awayComp.statistics : [];
 
-  for (const entry of raw) {
+  for (let i = 0; i < hs.length; i++) {
+    const entry = hs[i];
     if (!entry || typeof entry !== 'object') continue;
-    const name = entry.name || entry.label || '';
-    if (!WANTED_STATS.some(w => name.toLowerCase().includes(w.toLowerCase()))) continue;
-    const home = String(entry.homeDisplayValue ?? entry.home ?? '');
-    const away = String(entry.awayDisplayValue ?? entry.away ?? '');
+    const rawName = entry.name || entry.label || '';
+    const displayName = STAT_NAME_MAP[rawName] || rawName;
+    if (!WANTED_STATS.some(w => displayName.toLowerCase().includes(w.toLowerCase()))) continue;
+    const home = String(entry.displayValue ?? entry.homeDisplayValue ?? entry.home ?? '');
+    const awayEntry = as.find(a => (a.name || a.label) === rawName) || as[i];
+    const away = String(awayEntry?.displayValue ?? awayEntry?.awayDisplayValue ?? awayEntry?.away ?? '');
     if (home === '' && away === '') continue;
-    rows.push({ name, home, away });
-  }
-
-  if (rows.length === 0) {
-    const hs = Array.isArray(homeComp?.statistics) ? homeComp.statistics : [];
-    for (let i = 0; i < hs.length; i++) {
-      const entry = hs[i];
-      if (!entry || typeof entry !== 'object') continue;
-      const name = entry.name || entry.label || '';
-      if (!WANTED_STATS.some(w => name.toLowerCase().includes(w.toLowerCase()))) continue;
-      const home = String(entry.homeDisplayValue ?? entry.home ?? '');
-      const awayEntry = Array.isArray(awayComp?.statistics) ? awayComp.statistics[i] : null;
-      const away = String(awayEntry?.awayDisplayValue ?? awayEntry?.away ?? '');
-      if (home === '' && away === '') continue;
-      rows.push({ name, home, away });
-    }
+    rows.push({ name: displayName, home, away });
   }
 
   return rows.length > 0 ? rows : null;
