@@ -29,6 +29,32 @@ interface OddsResponse {
   message?: string;
 }
 
+const LEAGUE_TO_SPORT: Record<string, string> = {
+  'PL': 'soccer_epl',
+  'PD': 'soccer_spain_la_liga',
+  'SA': 'soccer_italy_serie_a',
+  'BL': 'soccer_germany_bundesliga',
+  'FL1': 'soccer_france_ligue_one',
+  'DED': 'soccer_netherlands_eredivisie',
+  'PPL': 'soccer_portugal_liga',
+  'BPL': 'soccer_belgium_first_division',
+  'SP': 'soccer_scotland Premiership',
+  'TSL': 'soccer_turkey_super_lig',
+  'UCL': 'soccer_uefa_champs_league',
+  'UEL': 'soccer_uefa_europa_league',
+  'UECL': 'soccer_uefa_europa_conference_league',
+  'FAC': 'soccer_england_fa_cup',
+  'CDR': 'soccer_spain_copa_del_rey',
+  'CI': 'soccer_italy_coppa_italia',
+  'DFB': 'soccer_germany_dfb_pokal',
+  'CDF': 'soccer_france_copa',
+  'KNVB': 'soccer_netherlands_cup',
+  'TDP': 'soccer_portugal_cup',
+  'BCP': 'soccer_belgium_cup',
+  'SCO': 'soccer_scotland_cup',
+  'TKC': 'soccer_turkey_cup',
+};
+
 function normalizeTeamName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -71,7 +97,7 @@ export async function fetchOddsForFixture(
   date: string
 ): Promise<{ odds: OneX2Odds | null; source: string }> {
   try {
-    const sport = fixture.leagueCode || 'soccer_epl';
+    const sport = fixture.leagueCode ? LEAGUE_TO_SPORT[fixture.leagueCode] || 'soccer_epl' : 'soccer_epl';
     const response = await fetch(`/api/odds?date=${date}&sport=${sport}`);
 
     if (!response.ok) {
