@@ -63,11 +63,19 @@ function findMatchingEvent(events: OddsEvent[], homeTeam: string, awayTeam: stri
   const home = normalizeTeamName(homeTeam);
   const away = normalizeTeamName(awayTeam);
 
-  return events.find(event => {
+  const exact = events.find(event => {
     const eventHome = normalizeTeamName(event.home_team);
     const eventAway = normalizeTeamName(event.away_team);
     return (eventHome === home && eventAway === away) ||
            (eventHome === away && eventAway === home);
+  });
+  if (exact) return exact;
+
+  return events.find(event => {
+    const eventHome = normalizeTeamName(event.home_team);
+    const eventAway = normalizeTeamName(event.away_team);
+    return eventHome.includes(home) || home.includes(eventHome) ||
+           eventAway.includes(away) || away.includes(eventAway);
   });
 }
 
@@ -94,30 +102,42 @@ function extractOneX2Odds(event: OddsEvent): OneX2Odds | null {
 
 export async function fetchOddsForFixture(
   fixture: { homeTeam: string; awayTeam: string; leagueCode?: string },
-  date: string
+  date?: string
 ): Promise<{ odds: OneX2Odds | null; source: string }> {
   try {
     const sport = fixture.leagueCode ? LEAGUE_TO_SPORT[fixture.leagueCode] || 'soccer_epl' : 'soccer_epl';
-    const response = await fetch(`/api/odds?date=${date}&sport=${sport}`);
+    const params = new URLSearchParams({ sport });
+    if (date) params.set('date', date);
+    const url = `/api/odds?${params}`;
+    console.log('[OddsService] Fetching URL:', url);
+    const response = await fetch(url);
+    console.log('[OddsService] Response status:', response.status);
 
     if (!response.ok) {
       return { odds: null, source: 'api-error' };
     }
 
     const data: OddsResponse = await response.json();
+    console.log('[OddsService] Data mode:', data.mode, 'events:', data.events?.length);
 
     if (data.mode === 'manual-only' || !data.events?.length) {
       return { odds: null, source: data.mode };
     }
 
+    console.log('[OddsService] Looking for:', fixture.homeTeam, 'vs', fixture.awayTeam);
+    console.log('[OddsService] Available teams:', data.events.map(e => `${e.home_team} vs ${e.away_team}`).join(', '));
     const matchingEvent = findMatchingEvent(data.events, fixture.homeTeam, fixture.awayTeam);
     if (!matchingEvent) {
+      console.log('[OddsService] No matching event found');
       return { odds: null, source: 'no-match' };
     }
+    console.log('[OddsService] Matched event:', matchingEvent.home_team, 'vs', matchingEvent.away_team);
 
     const odds = extractOneX2Odds(matchingEvent);
+    console.log('[OddsService] Extracted odds:', odds);
     return { odds, source: matchingEvent.bookmakers[0]?.title || 'unknown' };
-  } catch {
+  } catch (err) {
+    console.error('[OddsService] Error:', err);
     return { odds: null, source: 'fetch-error' };
   }
 }
