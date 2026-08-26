@@ -388,6 +388,7 @@ async function fetchEspnFixtures(targetDate, targetLeagues, options = {}) {
           fixtures.push({
             id: `${league.code}-${String(leagueMatchIndex++).padStart(2, '0')}`,
             espnEventId: ev.id ? String(ev.id) : undefined,
+            espnLeagueCode: league.espnCode,
             leagueCode: league.code,
             leagueName: league.name,
             leagueCountry: league.country,

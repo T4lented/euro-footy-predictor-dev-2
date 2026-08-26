@@ -21,7 +21,7 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
     setStatsLoading(true);
     setStatsError(null);
     try {
-      const data = await fetchMatchStats(fixture.leagueCode, fixture.espnEventId);
+      const data = await fetchMatchStats(fixture.espnLeagueCode || fixture.leagueCode, fixture.espnEventId);
       if (data) {
         setLiveStats(data);
       } else {
