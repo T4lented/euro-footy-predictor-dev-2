@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 import type { Fixture, League, SortOption } from '../types';
 
 interface LeagueListProps {
@@ -10,8 +10,6 @@ interface LeagueListProps {
   onItemSelect?: () => void;
   fixturesByLeague?: Record<string, Fixture[]>;
   onSelectGame?: (fixture: Fixture) => void;
-  sort?: SortOption;
-  onSortChange?: (sort: SortOption) => void;
 }
 
 type LeagueType = 'league' | 'cup' | 'uefa';
@@ -22,7 +20,7 @@ function leagueType(l: League): LeagueType {
   return 'league';
 }
 
-export function LeagueList({ leagues, activeCode, counts, onSelect, onItemSelect, fixturesByLeague, onSelectGame, sort = 'confidence', onSortChange }: LeagueListProps) {
+export function LeagueList({ leagues, activeCode, counts, onSelect, onItemSelect, fixturesByLeague, onSelectGame }: LeagueListProps) {
   const [expandedLeagueGroup, setExpandedLeagueGroup] = useState(true);
   const [expandedCupGroup, setExpandedCupGroup] = useState(false);
   const [expandedEuropeanCups, setExpandedEuropeanCups] = useState(false);
@@ -171,35 +169,6 @@ export function LeagueList({ leagues, activeCode, counts, onSelect, onItemSelect
         >
           All
         </button>
-      </div>
-
-      <div className="mb-3">
-        <div className="flex items-center gap-1.5">
-          <ArrowUpDown className="size-3" style={{ color: 'var(--text-muted)' }} />
-          <span className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Sort by</span>
-        </div>
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {([
-            ['confidence', 'Confidence'],
-            ['prob-desc', 'Win %'],
-            ['time-asc', 'Kick-off'],
-            ['league-asc', 'League'],
-          ] as [SortOption, string][]).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => onSortChange?.(value)}
-              className="border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide transition-colors"
-              style={
-                sort === value
-                  ? { borderColor: 'var(--accent)', backgroundColor: 'var(--accent-soft)', color: 'var(--accent-text)' }
-                  : { borderColor: 'var(--border-glass)', color: 'var(--text-secondary)' }
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </div>
       </div>
 
       <ul className="space-y-0.5">

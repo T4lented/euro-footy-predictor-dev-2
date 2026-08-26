@@ -1,5 +1,5 @@
 import { LeagueList } from './LeagueList';
-import type { Fixture, League, SortOption } from '../types';
+import type { Fixture, League } from '../types';
 
 interface LeagueSidebarProps {
   leagues: League[];
@@ -8,11 +8,9 @@ interface LeagueSidebarProps {
   onSelect: (code: string | null) => void;
   fixturesByLeague?: Record<string, Fixture[]>;
   onSelectGame?: (fixture: Fixture) => void;
-  sort?: SortOption;
-  onSortChange?: (sort: SortOption) => void;
 }
 
-export function LeagueSidebar({ leagues, activeCode, counts, onSelect, fixturesByLeague, onSelectGame, sort, onSortChange }: LeagueSidebarProps) {
+export function LeagueSidebar({ leagues, activeCode, counts, onSelect, fixturesByLeague, onSelectGame }: LeagueSidebarProps) {
   return (
     <aside className="glass hidden shrink-0 border-y-0 border-l-0 lg:block lg:w-64">
       <div className="sticky top-[73px] max-h-[calc(100vh-73px)] overflow-y-auto p-4">
@@ -23,8 +21,6 @@ export function LeagueSidebar({ leagues, activeCode, counts, onSelect, fixturesB
           onSelect={onSelect}
           fixturesByLeague={fixturesByLeague}
           onSelectGame={onSelectGame}
-          sort={sort}
-          onSortChange={onSortChange}
         />
       </div>
     </aside>

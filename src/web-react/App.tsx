@@ -267,8 +267,6 @@ export default function App() {
             onSelect={setLeagueCode}
             fixturesByLeague={fixturesByLeague}
             onSelectGame={setActiveFixture}
-            sort={sort}
-            onSortChange={setSort}
           />
 
           <DateRibbon dates={dateOptions} selected={selectedDate} onSelect={setSelectedDate} />
@@ -281,8 +279,6 @@ export default function App() {
               onSelect={setLeagueCode}
               fixturesByLeague={fixturesByLeague}
               onSelectGame={setActiveFixture}
-              sort={sort}
-              onSortChange={setSort}
             />
 
             <main className="min-w-0 flex-1 p-4 sm:p-6 overflow-x-hidden">
@@ -315,6 +311,30 @@ export default function App() {
                   <div className="mb-3 flex items-center justify-between font-mono text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
                     <span>{filtered.length} fixture{filtered.length === 1 ? '' : 's'} · {data?.provider}</span>
                     <span>{selectedDate}</span>
+                  </div>
+
+                  <div className="mb-4 flex items-center gap-2">
+                    <span className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Sort by</span>
+                    {([
+                      ['confidence', 'Confidence'],
+                      ['prob-desc', 'Win %'],
+                      ['time-asc', 'Kick-off'],
+                      ['league-asc', 'League'],
+                    ] as [SortOption, string][]).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setSort(value)}
+                        className="border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide transition-colors"
+                        style={
+                          sort === value
+                            ? { borderColor: 'var(--accent)', backgroundColor: 'var(--accent-soft)', color: 'var(--accent-text)' }
+                            : { borderColor: 'var(--border-glass)', color: 'var(--text-secondary)' }
+                        }
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
 
                   {globalSort && globallySortedFixtures && (
