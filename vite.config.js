@@ -32,7 +32,6 @@ function vercelApiPlugin() {
       server.middlewares.use('/api', async (req, res) => {
         const url = new URL(req.url || '/', `http://${req.headers.host}`);
         const params = Object.fromEntries(url.searchParams.entries());
-        console.log('[Vite API]', req.method, url.pathname, params);
 
         const apiPath = resolve(__dirname, `api${url.pathname}.js`);
 

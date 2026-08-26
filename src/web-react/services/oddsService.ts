@@ -108,36 +108,26 @@ export async function fetchOddsForFixture(
     const sport = fixture.leagueCode ? LEAGUE_TO_SPORT[fixture.leagueCode] || 'soccer_epl' : 'soccer_epl';
     const params = new URLSearchParams({ sport });
     if (date) params.set('date', date);
-    const url = `/api/odds?${params}`;
-    console.log('[OddsService] Fetching URL:', url);
-    const response = await fetch(url);
-    console.log('[OddsService] Response status:', response.status);
+    const response = await fetch(`/api/odds?${params}`);
 
     if (!response.ok) {
       return { odds: null, source: 'api-error' };
     }
 
     const data: OddsResponse = await response.json();
-    console.log('[OddsService] Data mode:', data.mode, 'events:', data.events?.length);
 
     if (data.mode === 'manual-only' || !data.events?.length) {
       return { odds: null, source: data.mode };
     }
 
-    console.log('[OddsService] Looking for:', fixture.homeTeam, 'vs', fixture.awayTeam);
-    console.log('[OddsService] Available teams:', data.events.map(e => `${e.home_team} vs ${e.away_team}`).join(', '));
     const matchingEvent = findMatchingEvent(data.events, fixture.homeTeam, fixture.awayTeam);
     if (!matchingEvent) {
-      console.log('[OddsService] No matching event found');
       return { odds: null, source: 'no-match' };
     }
-    console.log('[OddsService] Matched event:', matchingEvent.home_team, 'vs', matchingEvent.away_team);
 
     const odds = extractOneX2Odds(matchingEvent);
-    console.log('[OddsService] Extracted odds:', odds);
     return { odds, source: matchingEvent.bookmakers[0]?.title || 'unknown' };
-  } catch (err) {
-    console.error('[OddsService] Error:', err);
+  } catch {
     return { odds: null, source: 'fetch-error' };
   }
 }

@@ -70,11 +70,9 @@ export function KellyPanel({ fixture }: KellyPanelProps) {
     async function autoFetchOdds() {
       setFetchingOdds(true);
       try {
-        console.log('[Odds] Fetching for:', fixture.homeTeam, 'vs', fixture.awayTeam, 'league:', fixture.leagueCode);
         const result = await fetchOddsForFixture(
           { homeTeam: fixture.homeTeam, awayTeam: fixture.awayTeam, leagueCode: fixture.leagueCode }
         );
-        console.log('[Odds] Result:', result);
 
         if (result.odds) {
           setOdds(result.odds);
@@ -82,8 +80,7 @@ export function KellyPanel({ fixture }: KellyPanelProps) {
         } else {
           setOddsSource(result.source === 'manual-only' ? 'No API key configured' : 'No live odds available');
         }
-      } catch (err) {
-        console.error('[Odds] Fetch error:', err);
+      } catch {
         setOddsSource('Failed to fetch odds');
       } finally {
         setFetchingOdds(false);

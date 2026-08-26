@@ -37,14 +37,12 @@ const SPORT_MAP = {
 };
 
 export default async function handler(req, res) {
-  console.log('[API:odds] Called with:', req.query);
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
   if (!sameOrigin(req)) return res.status(403).json({ error: 'Cross-origin request rejected' });
   const dateParam = String(req.query.date || '');
   if (dateParam && !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return res.status(400).json({ error: 'Invalid date format' });
   if (!permit(req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown')) return res.status(429).json({ error: 'Refresh limit reached; try again shortly.' });
 
-  console.log('[API:odds] ODDS_API_KEY present:', !!process.env.ODDS_API_KEY);
   if (!process.env.ODDS_API_KEY) {
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({ mode: 'manual-only', events: [], message: 'Manual decimal odds are available. A server-side odds provider key has not been configured.' });
@@ -69,7 +67,6 @@ export default async function handler(req, res) {
 
     const payload = await upstream.json();
     const events = Array.isArray(payload) ? payload : [];
-    console.log('[API:odds] Got', events.length, 'events from provider');
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
     return res.status(200).json({ mode: 'provider', events, sport: sportKey, fetchedAt: new Date().toISOString() });
