@@ -8,33 +8,33 @@ const DOMESTIC_CUP_CODES = ['FAC', 'CDR', 'CI', 'DFB', 'CDF', 'KNVB', 'TDP', 'BC
 
 export const LEAGUES = {
   // Domestic leagues
-  PL: { code: 'PL', espnCode: 'eng.1', name: 'Premier League', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', avgGoalsPerGame: 2.85, homeAdvantageBase: 1.15, type: 'league' },
-  PD: { code: 'PD', espnCode: 'esp.1', name: 'La Liga', country: 'Spain', flag: '🇪🇸', avgGoalsPerGame: 2.60, homeAdvantageBase: 1.18, type: 'league' },
-  SA: { code: 'SA', espnCode: 'ita.1', name: 'Serie A', country: 'Italy', flag: '🇮🇹', avgGoalsPerGame: 2.65, homeAdvantageBase: 1.16, type: 'league' },
-  BL: { code: 'BL', espnCode: 'ger.1', name: 'Bundesliga', country: 'Germany', flag: '🇩🇪', avgGoalsPerGame: 3.10, homeAdvantageBase: 1.14, type: 'league' },
-  FL1: { code: 'FL1', espnCode: 'fra.1', name: 'Ligue 1', country: 'France', flag: '🇫🇷', avgGoalsPerGame: 2.70, homeAdvantageBase: 1.15, type: 'league' },
-  DED: { code: 'DED', espnCode: 'ned.1', name: 'Eredivisie', country: 'Netherlands', flag: '🇳🇱', avgGoalsPerGame: 3.15, homeAdvantageBase: 1.17, type: 'league' },
-  PPL: { code: 'PPL', espnCode: 'por.1', name: 'Primeira Liga', country: 'Portugal', flag: '🇵🇹', avgGoalsPerGame: 2.55, homeAdvantageBase: 1.20, type: 'league' },
-  BPL: { code: 'BPL', espnCode: 'bel.1', name: 'Belgian Pro League', country: 'Belgium', flag: '🇧🇪', avgGoalsPerGame: 2.80, homeAdvantageBase: 1.15, type: 'league' },
-  SP: { code: 'SP', espnCode: 'sco.1', name: 'Scottish Premiership', country: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', avgGoalsPerGame: 2.75, homeAdvantageBase: 1.22, type: 'league' },
-  TSL: { code: 'TSL', espnCode: 'tur.1', name: 'Süper Lig', country: 'Turkey', flag: '🇹🇷', avgGoalsPerGame: 2.80, homeAdvantageBase: 1.25, type: 'league' },
+  PL: { code: 'PL', espnCode: 'eng.1', name: 'Premier League', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/23.png', avgGoalsPerGame: 2.85, homeAdvantageBase: 1.15, type: 'league' },
+  PD: { code: 'PD', espnCode: 'esp.1', name: 'La Liga', country: 'Spain', flag: '🇪🇸', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/87.png', avgGoalsPerGame: 2.60, homeAdvantageBase: 1.18, type: 'league' },
+  SA: { code: 'SA', espnCode: 'ita.1', name: 'Serie A', country: 'Italy', flag: '🇮🇹', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/55.png', avgGoalsPerGame: 2.65, homeAdvantageBase: 1.16, type: 'league' },
+  BL: { code: 'BL', espnCode: 'ger.1', name: 'Bundesliga', country: 'Germany', flag: '🇩🇪', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/19.png', avgGoalsPerGame: 3.10, homeAdvantageBase: 1.14, type: 'league' },
+  FL1: { code: 'FL1', espnCode: 'fra.1', name: 'Ligue 1', country: 'France', flag: '🇫🇷', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/53.png', avgGoalsPerGame: 2.70, homeAdvantageBase: 1.15, type: 'league' },
+  DED: { code: 'DED', espnCode: 'ned.1', name: 'Eredivisie', country: 'Netherlands', flag: '🇳🇱', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/37.png', avgGoalsPerGame: 3.15, homeAdvantageBase: 1.17, type: 'league' },
+  PPL: { code: 'PPL', espnCode: 'por.1', name: 'Primeira Liga', country: 'Portugal', flag: '🇵🇹', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/86.png', avgGoalsPerGame: 2.55, homeAdvantageBase: 1.20, type: 'league' },
+  BPL: { code: 'BPL', espnCode: 'bel.1', name: 'Belgian Pro League', country: 'Belgium', flag: '🇧🇪', logo: null, avgGoalsPerGame: 2.80, homeAdvantageBase: 1.15, type: 'league' },
+  SP: { code: 'SP', espnCode: 'sco.1', name: 'Scottish Premiership', country: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', logo: null, avgGoalsPerGame: 2.75, homeAdvantageBase: 1.22, type: 'league' },
+  TSL: { code: 'TSL', espnCode: 'tur.1', name: 'Süper Lig', country: 'Turkey', flag: '🇹🇷', logo: null, avgGoalsPerGame: 2.80, homeAdvantageBase: 1.25, type: 'league' },
 
   // Domestic cups
-  FAC: { code: 'FAC', espnCode: 'eng.fa', name: 'FA Cup', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', avgGoalsPerGame: 2.75, homeAdvantageBase: 1.12, type: 'cup' },
-  CDR: { code: 'CDR', espnCode: 'esp.copa_del_rey', name: 'Copa del Rey', country: 'Spain', flag: '🇪🇸', avgGoalsPerGame: 2.55, homeAdvantageBase: 1.11, type: 'cup' },
-  CI: { code: 'CI', espnCode: 'ita.coppa_italia', name: 'Coppa Italia', country: 'Italy', flag: '🇮🇹', avgGoalsPerGame: 2.50, homeAdvantageBase: 1.11, type: 'cup' },
-  DFB: { code: 'DFB', espnCode: 'ger.dfb_pokal', name: 'DFB-Pokal', country: 'Germany', flag: '🇩🇪', avgGoalsPerGame: 2.90, homeAdvantageBase: 1.10, type: 'cup' },
-  CDF: { code: 'CDF', espnCode: 'fra.coupe_de_france', name: 'Coupe de France', country: 'France', flag: '🇫🇷', avgGoalsPerGame: 2.65, homeAdvantageBase: 1.11, type: 'cup' },
-  KNVB: { code: 'KNVB', espnCode: 'ned.cup', name: 'KNVB Beker', country: 'Netherlands', flag: '🇳🇱', avgGoalsPerGame: 2.85, homeAdvantageBase: 1.11, type: 'cup' },
-  TDP: { code: 'TDP', espnCode: 'por.taca.portugal', name: 'Taça de Portugal', country: 'Portugal', flag: '🇵🇹', avgGoalsPerGame: 2.50, homeAdvantageBase: 1.11, type: 'cup' },
-  BCP: { code: 'BCP', espnCode: 'bel.cup', name: 'Belgian Cup', country: 'Belgium', flag: '🇧🇪', avgGoalsPerGame: 2.70, homeAdvantageBase: 1.11, type: 'cup' },
-  SCO: { code: 'SCO', espnCode: 'sco.tennents', name: 'Scottish Cup', country: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', avgGoalsPerGame: 2.65, homeAdvantageBase: 1.12, type: 'cup' },
-  TKC: { code: 'TKC', espnCode: 'tur.cup', name: 'Turkish Cup', country: 'Turkey', flag: '🇹🇷', avgGoalsPerGame: 2.60, homeAdvantageBase: 1.11, type: 'cup' },
+  FAC: { code: 'FAC', espnCode: 'eng.fa', name: 'FA Cup', country: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', logo: null, avgGoalsPerGame: 2.75, homeAdvantageBase: 1.12, type: 'cup' },
+  CDR: { code: 'CDR', espnCode: 'esp.copa_del_rey', name: 'Copa del Rey', country: 'Spain', flag: '🇪🇸', logo: null, avgGoalsPerGame: 2.55, homeAdvantageBase: 1.11, type: 'cup' },
+  CI: { code: 'CI', espnCode: 'ita.coppa_italia', name: 'Coppa Italia', country: 'Italy', flag: '🇮🇹', logo: null, avgGoalsPerGame: 2.50, homeAdvantageBase: 1.11, type: 'cup' },
+  DFB: { code: 'DFB', espnCode: 'ger.dfb_pokal', name: 'DFB-Pokal', country: 'Germany', flag: '🇩🇪', logo: null, avgGoalsPerGame: 2.90, homeAdvantageBase: 1.10, type: 'cup' },
+  CDF: { code: 'CDF', espnCode: 'fra.coupe_de_france', name: 'Coupe de France', country: 'France', flag: '🇫🇷', logo: null, avgGoalsPerGame: 2.65, homeAdvantageBase: 1.11, type: 'cup' },
+  KNVB: { code: 'KNVB', espnCode: 'ned.cup', name: 'KNVB Beker', country: 'Netherlands', flag: '🇳🇱', logo: null, avgGoalsPerGame: 2.85, homeAdvantageBase: 1.11, type: 'cup' },
+  TDP: { code: 'TDP', espnCode: 'por.taca.portugal', name: 'Taça de Portugal', country: 'Portugal', flag: '🇵🇹', logo: null, avgGoalsPerGame: 2.50, homeAdvantageBase: 1.11, type: 'cup' },
+  BCP: { code: 'BCP', espnCode: 'bel.cup', name: 'Belgian Cup', country: 'Belgium', flag: '🇧🇪', logo: null, avgGoalsPerGame: 2.70, homeAdvantageBase: 1.11, type: 'cup' },
+  SCO: { code: 'SCO', espnCode: 'sco.tennents', name: 'Scottish Cup', country: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', logo: null, avgGoalsPerGame: 2.65, homeAdvantageBase: 1.12, type: 'cup' },
+  TKC: { code: 'TKC', espnCode: 'tur.cup', name: 'Turkish Cup', country: 'Turkey', flag: '🇹🇷', logo: null, avgGoalsPerGame: 2.60, homeAdvantageBase: 1.11, type: 'cup' },
 
   // UEFA competitions
-  UCL: { code: 'UCL', espnCode: 'uefa.champions', name: 'Champions League', country: 'Europe', flag: '🏆', avgGoalsPerGame: 2.70, homeAdvantageBase: 1.08, type: 'uefa' },
-  UEL: { code: 'UEL', espnCode: 'uefa.europa', name: 'Europa League', country: 'Europe', flag: '🏆', avgGoalsPerGame: 2.65, homeAdvantageBase: 1.08, type: 'uefa' },
-  UECL: { code: 'UECL', espnCode: 'uefa.europa.conf', name: 'Conference League', country: 'Europe', flag: '🏆', avgGoalsPerGame: 2.60, homeAdvantageBase: 1.08, type: 'uefa' }
+  UCL: { code: 'UCL', espnCode: 'uefa.champions', name: 'Champions League', country: 'Europe', flag: '🏆', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/4.png', avgGoalsPerGame: 2.70, homeAdvantageBase: 1.08, type: 'uefa' },
+  UEL: { code: 'UEL', espnCode: 'uefa.europa', name: 'Europa League', country: 'Europe', flag: '🏆', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/230.png', avgGoalsPerGame: 2.65, homeAdvantageBase: 1.08, type: 'uefa' },
+  UECL: { code: 'UECL', espnCode: 'uefa.europa.conf', name: 'Conference League', country: 'Europe', flag: '🏆', logo: 'https://a.espncdn.com/i/leaguelogos/soccer/500/231.png', avgGoalsPerGame: 2.60, homeAdvantageBase: 1.08, type: 'uefa' }
 };
 
 export const LEAGUE_LIST = Object.values(LEAGUES);

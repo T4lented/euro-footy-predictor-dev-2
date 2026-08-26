@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Fixture } from '../types';
 import { TeamLogo } from './TeamLogo';
+import { LeagueLogo } from './LeagueLogo';
 
 interface MatchModalProps {
   fixture: Fixture | null;
@@ -35,7 +36,7 @@ export function MatchModal({ fixture, onClose }: MatchModalProps) {
         <div className="flex items-start justify-between gap-3 border-b p-5" style={{ borderColor: 'var(--border-glass)' }}>
           <div>
             <p className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-              <span>{fixture.flag}</span> {fixture.leagueName} · {fixture.matchType}
+              <LeagueLogo logo={fixture.leagueLogo} flag={fixture.flag} name={fixture.leagueName} className="size-5 shrink-0" /> {fixture.leagueName} · {fixture.matchType}
             </p>
             <h3 className="mt-1.5 flex flex-wrap items-center gap-2 font-display text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
               <TeamLogo logo={fixture.homeTeamLogo} name={fixture.homeTeam} className="size-6 shrink-0" />

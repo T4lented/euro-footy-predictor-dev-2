@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getDailyFixtures } from '../../services/fixturesService.js';
 import { LEAGUE_LIST } from '../../config/leagues.js';
 import { CompactKellyCard } from './CompactKellyCard';
+import { LeagueLogo } from './LeagueLogo';
 import { useTheme } from '../hooks/useTheme';
 import { sanitizeSearchQuery, isValidDateString } from '../lib/validation';
 import { sortFixtures } from '../lib/export';
@@ -250,7 +251,7 @@ export function KellyCalculatorPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                        <span>{fixture.flag}</span>
+                        <LeagueLogo logo={fixture.leagueLogo} flag={fixture.flag} name={fixture.leagueName} className="size-3 shrink-0" />
                         <span>{fixture.leagueName}</span>
                         <span>·</span>
                         <span>{fixture.time}</span>

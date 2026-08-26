@@ -2,6 +2,7 @@ export interface League {
   code: string;
   name: string;
   flag: string;
+  logo?: string | null;
   country?: string;
 }
 
@@ -65,6 +66,7 @@ export interface Fixture {
   leagueCode: string;
   leagueName: string;
   flag: string;
+  leagueLogo?: string | null;
   date: string;
   time: string;
   homeTeam: string;

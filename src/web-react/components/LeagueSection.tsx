@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { ChevronUp, ChevronDown, Clock, TrendingUp } from 'lucide-react';
 import type { Fixture } from '../types';
 import { FixtureCard } from './FixtureCard';
+import { LeagueLogo } from './LeagueLogo';
 
 interface LeagueSectionProps {
   leagueCode: string;
   leagueName: string;
   flag: string;
+  leagueLogo?: string | null;
   country?: string;
   fixtures: Fixture[];
   onOpen: (fixture: Fixture) => void;
@@ -18,6 +20,7 @@ export function LeagueSection({
   leagueCode,
   leagueName,
   flag,
+  leagueLogo,
   country,
   fixtures,
   onOpen
@@ -75,7 +78,7 @@ export function LeagueSection({
       {/* League Header */}
       <div className="flex items-center justify-between border-b p-4" style={{ borderColor: 'var(--border-glass)' }}>
         <div className="flex items-center gap-3">
-          <span className="text-2xl">{flag}</span>
+          <LeagueLogo logo={leagueLogo} flag={flag} name={leagueName} className="size-8 shrink-0" />
           <div>
             <h2 className="font-display text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
               {leagueName}

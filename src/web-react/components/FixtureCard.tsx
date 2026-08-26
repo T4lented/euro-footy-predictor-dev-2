@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Clock, BarChart3 } from 'lucide-react';
 import type { Fixture } from '../types';
 import { TeamLogo } from './TeamLogo';
+import { LeagueLogo } from './LeagueLogo';
 
 interface FixtureCardProps {
   fixture: Fixture;
@@ -61,7 +62,7 @@ export function FixtureCard({ fixture, onOpen, selected = false, onToggleSelect,
               {selected ? '✓' : ''}
             </span>
           )}
-          <span>{fixture.flag}</span>
+          <LeagueLogo logo={fixture.leagueLogo} flag={fixture.flag} name={fixture.leagueName} />
           <span className="truncate">{fixture.leagueName}</span>
           <span style={{ color: 'var(--text-muted)' }}>·</span>
           <span className="truncate" style={{ color: 'var(--text-muted)' }}>{fixture.matchType}</span>

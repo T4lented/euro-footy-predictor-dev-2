@@ -382,6 +382,7 @@ export default function App() {
                             leagueCode={code}
                             leagueName={league.name}
                             flag={league.flag}
+                            leagueLogo={league.logo}
                             country={league.country}
                             fixtures={leagueFixtures}
                             onOpen={setActiveFixture}

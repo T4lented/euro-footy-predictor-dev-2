@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 import type { Fixture, League, SortOption } from '../types';
+import { LeagueLogo } from './LeagueLogo';
 
 interface LeagueListProps {
   leagues: League[];
@@ -60,7 +61,7 @@ export function LeagueList({ leagues, activeCode, counts, onSelect, onItemSelect
             borderRadius: expanded ? '6px 6px 0 0' : '6px',
           }}
         >
-          <span className="text-base leading-none">{l.flag}</span>
+          <LeagueLogo logo={l.logo} flag={l.flag} name={l.name} className="size-4 shrink-0" />
           <span className="flex-1 truncate">{l.name}</span>
           <span className="font-mono text-[10px] tabular" style={{ color: 'var(--text-muted)' }}>
             {counts[l.code] ?? 0}

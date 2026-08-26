@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import type { Fixture } from '../types';
+import { LeagueLogo } from './LeagueLogo';
 import {
   calculateKelly,
   calculateNoVigMarket,
@@ -108,7 +109,7 @@ export function CompactKellyCard({
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-            <span>{fixture.flag}</span>
+            <LeagueLogo logo={fixture.leagueLogo} flag={fixture.flag} name={fixture.leagueName} className="size-3 shrink-0" />
             <span>{fixture.leagueName}</span>
             <span>·</span>
             <span>{fixture.time}</span>
