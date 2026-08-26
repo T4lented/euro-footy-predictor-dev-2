@@ -63,6 +63,7 @@ export interface StatRow {
 
 export interface Fixture {
   id: string;
+  espnEventId?: string;
   leagueCode: string;
   leagueName: string;
   flag: string;
