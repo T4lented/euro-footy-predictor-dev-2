@@ -1,4 +1,4 @@
-import { Download, FileUp, Plus, ShieldCheck, Wallet, X } from 'lucide-react';
+import { Download, FileUp, Plus, ShieldCheck, Wallet, X, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Fixture } from '../types';
 import {
@@ -22,6 +22,7 @@ import {
   type PortfolioBet,
   type PortfolioState,
 } from '../lib/portfolio';
+import { fetchOddsForFixture } from '../services/oddsService';
 
 const OUTCOMES: { id: OneX2Outcome; label: string }[] = [
   { id: 'home', label: 'Home win' },
@@ -55,6 +56,8 @@ export function KellyPanel({ fixture }: KellyPanelProps) {
   const [actualOdds, setActualOdds] = useState(0);
   const [actualStake, setActualStake] = useState(0);
   const [cashFlow, setCashFlow] = useState(0);
+  const [oddsSource, setOddsSource] = useState<string | null>(null);
+  const [fetchingOdds, setFetchingOdds] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => { savePortfolio(portfolio); }, [portfolio]);
@@ -62,7 +65,30 @@ export function KellyPanel({ fixture }: KellyPanelProps) {
     setOdds({ home: 0, draw: 0, away: 0 });
     setOutcome('home');
     setStagedBet(null);
+    setOddsSource(null);
   }, [fixture.id]);
+
+  async function handleFetchOdds() {
+    setFetchingOdds(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const result = await fetchOddsForFixture(
+        { homeTeam: fixture.homeTeam, awayTeam: fixture.awayTeam, leagueCode: fixture.leagueCode },
+        today
+      );
+
+      if (result.odds) {
+        setOdds(result.odds);
+        setOddsSource(`Live from ${result.source}`);
+      } else {
+        setOddsSource(result.source === 'manual-only' ? 'No API key configured' : 'No live odds found');
+      }
+    } catch {
+      setOddsSource('Failed to fetch odds');
+    } finally {
+      setFetchingOdds(false);
+    }
+  }
 
   const probabilities = {
     home: fixture.prediction.probabilities.homeWin,
@@ -178,8 +204,27 @@ export function KellyPanel({ fixture }: KellyPanelProps) {
 
       <div className="glass mt-4 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><p className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Manual decimal odds</p><p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>Live provider access is disabled until a server-only key is configured. These inputs work without an account.</p></div>
-          <span className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>{market ? `Market overround ${market.overroundPercent.toFixed(1)}%` : 'Enter all three prices'}</span>
+          <div>
+            <p className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Manual decimal odds</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+              {oddsSource ? oddsSource : 'Enter odds manually or fetch live odds from The Odds API.'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+              {market ? `Market overround ${market.overroundPercent.toFixed(1)}%` : 'Enter all three prices'}
+            </span>
+            <button
+              type="button"
+              onClick={handleFetchOdds}
+              disabled={fetchingOdds}
+              className="glass flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+              style={{ color: 'var(--accent)' }}
+            >
+              <RefreshCw className={`size-3.5 ${fetchingOdds ? 'animate-spin' : ''}`} />
+              {fetchingOdds ? 'Fetching...' : 'Fetch Live Odds'}
+            </button>
+          </div>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           {OUTCOMES.map(item => <label key={item.id} className="block"><span className="mb-1 block font-mono text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{item.label}</span><input aria-label={`${item.label} decimal odds`} type="number" min="1.01" step="0.01" value={odds[item.id] || ''} onChange={event => setOdds(current => ({ ...current, [item.id]: toNumber(event.target.value) }))} className="w-full rounded border bg-transparent px-3 py-2 font-mono text-sm tabular" style={{ borderColor: 'var(--border-glass-strong)', color: 'var(--text-primary)' }} /></label>)}
