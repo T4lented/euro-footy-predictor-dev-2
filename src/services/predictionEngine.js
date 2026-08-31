@@ -50,7 +50,7 @@ function applyFormOverride(teamObj, formMap) {
   if (!match) {
     for (const [key, value] of Object.entries(formMap)) {
       const k = normalizeName(key);
-      if (k === target || (target.length >= 4 && k.length >= 4 && (k.includes(target) || target.includes(k)))) {
+      if (k === target || (target.length >= 4 && k.length >= 4 && (k.split(' ').includes(target) || target.split(' ').includes(k)))) {
         match = value;
         break;
       }
@@ -58,7 +58,21 @@ function applyFormOverride(teamObj, formMap) {
   }
   if (!match || !Array.isArray(match.recentForm) || match.recentForm.length === 0) return;
   teamObj.recentForm = match.recentForm;
-  teamObj.formPoints = typeof match.formPoints === 'number' ? match.formPoints : match.recentForm.reduce((a, r) => a + (r === 'W' ? 3 : r === 'D' ? 1 : 0), 0);
+  if (typeof match.formPoints === 'number') {
+    teamObj.formPoints = match.formPoints;
+  } else {
+    let decayBase = 0.85;
+    let weightedPoints = 0;
+    for (let i = 0; i < match.recentForm.length; i++) {
+       const r = match.recentForm[i];
+       const pts = r === 'W' ? 3 : r === 'D' ? 1 : 0;
+       const weight = Math.pow(decayBase, match.recentForm.length - 1 - i);
+       weightedPoints += pts * weight;
+    }
+    const maxDecayed = 3 * (1 - Math.pow(decayBase, match.recentForm.length)) / (1 - decayBase);
+    const rescale = (match.recentForm.length * 3) / maxDecayed;
+    teamObj.formPoints = weightedPoints * rescale;
+  }
 }
 
 export function predictMatch(homeTeamName, awayTeamName, leagueCode = 'PL', espnH2H = null, formMap = null) {
@@ -105,6 +119,10 @@ export function predictMatch(homeTeamName, awayTeamName, leagueCode = 'PL', espn
   lambda = Math.max(0.35, Math.min(4.2, lambda));
   mu = Math.max(0.30, Math.min(3.8, mu));
 
+  // Dynamic Dixon-Coles Rho based on total expected goals
+  const totalExpG = lambda + mu;
+  const dynamicRho = Math.max(-0.15, Math.min(-0.02, -0.05 * (2.75 / totalExpG)));
+
   // 3. Compute 10x10 Scoreline Probability Matrix
   const MAX_GOALS = 9;
   let probHomeWin = 0;
@@ -120,7 +138,7 @@ export function predictMatch(homeTeamName, awayTeamName, leagueCode = 'PL', espn
     for (let j = 0; j <= MAX_GOALS; j++) {
       const pHomeGoal = poisson(i, lambda);
       const pAwayGoal = poisson(j, mu);
-      const tau = dixonColesTau(i, j, lambda, mu);
+      const tau = dixonColesTau(i, j, lambda, mu, dynamicRho);
       const pScore = pHomeGoal * pAwayGoal * tau;
 
       if (pScore > 0) {

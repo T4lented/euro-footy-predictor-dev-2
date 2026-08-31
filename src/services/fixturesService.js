@@ -211,13 +211,13 @@ const TEAM_LOGOS = {
   'Almere City': 'https://crests.football-data.org/204.png',
 
   // Primeira Liga
-  'Sporting CP': 'https://crests.football-data.org/5765.png',
-  'SL Benfica': 'https://crests.football-data.org/5765.png',
-  'Benfica': 'https://crests.football-data.org/5765.png',
-  'FC Porto': 'https://crests.football-data.org/5765.png',
-  'Porto': 'https://crests.football-data.org/5765.png',
-  'SC Braga': 'https://crests.football-data.org/5765.png',
-  'Braga': 'https://crests.football-data.org/5765.png',
+  'Sporting CP': 'https://crests.football-data.org/498.png',
+  'SL Benfica': 'https://crests.football-data.org/1903.png',
+  'Benfica': 'https://crests.football-data.org/1903.png',
+  'FC Porto': 'https://crests.football-data.org/503.png',
+  'Porto': 'https://crests.football-data.org/503.png',
+  'SC Braga': 'https://crests.football-data.org/5613.png',
+  'Braga': 'https://crests.football-data.org/5613.png',
 
   // Scottish Premiership
   'Celtic FC': 'https://crests.football-data.org/76.png',
@@ -255,7 +255,9 @@ function findMatchingEvent(fixture, events) {
   }) || events.find(ev => {
     const comps = ev.competitions?.[0]?.competitors || [];
     const teams = comps.map(c => (c.team?.displayName || c.team?.name || '').toLowerCase());
-    return teams.some(t => t.includes(homeLower.split(' ').pop()) || homeLower.split(' ').some(p => t.includes(p)));
+    const homeMatch = teams.some(t => t.includes(homeLower.split(' ').pop()) || homeLower.split(' ').some(p => p.length > 3 && t.includes(p)));
+    const awayMatch = teams.some(t => t.includes(awayLower.split(' ').pop()) || awayLower.split(' ').some(p => p.length > 3 && t.includes(p)));
+    return homeMatch && awayMatch;
   }) || null;
 }
 
@@ -299,7 +301,7 @@ function extractMatchStats(comp, homeComp, awayComp) {
   return rows.length > 0 ? rows : null;
 }
 
-function formatDate(date) {
+export function formatDate(date) {
   return date.toISOString().split('T')[0];
 }
 
@@ -544,4 +546,11 @@ export async function getDailyFixtures(dateStr = null, leagueFilter = null, opti
       ? 'All proxy requests failed. Check API status or try refreshing.'
       : `No matches scheduled for ${dateStr || 'today'}.`
   };
+}
+
+export async function getFixtureById(id, dateStr = null) {
+  const fixtures = await getDailyFixtures(dateStr);
+  const fixture = fixtures.find(f => f.id === id);
+  if (!fixture) throw new Error('Fixture ' + id + ' not found');
+  return fixture;
 }
